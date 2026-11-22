@@ -446,11 +446,11 @@ function pgChk(){
      <tr style="height:${h(sp.meta)}"><th colspan="2">${J('공종')}</th><td colspan="${all?2:1}" class="c">${esc(c.work)}</td><th>세부공종</th><td colspan="3" class="c">${esc(c.sub)}</td></tr>
      <tr style="height:${h(sp.meta)}"><th colspan="2">${J('부위')}</th><td colspan="${all?2:1}" class="c">${esc(c.part)}</td><th>위치</th><td colspan="3" class="c">${esc(c.pos)}</td></tr>`:'')
      +`<tr style="height:${h(sp.ch[0])}"><th colspan="2" rowspan="2">구분</th><th rowspan="2" colspan="${all?2:1}">검 사 항 목</th><th rowspan="2">기준,참고사항</th><th colspan="2">검사결과</th><th rowspan="2">조치사항</th></tr><tr style="height:${h(sp.ch[1])}"><th>${esc(cols[0])}</th><th>${esc(cols[1])}</th></tr>`;
-    let rows='';const aSpan={};groups.forEach(g=>aSpan[g.a]=(aSpan[g.a]||0)+g.it.length);const aDone={};
-    groups.forEach(g=>g.it.forEach((it,k)=>{
-      idx++;
-      rows+=`<tr style="height:${h(itemPt)}">${!aDone[g.a]?`<td rowspan="${aSpan[g.a]}" class="gr">${br(aSpan[g.a]>4?String(g.a).replace(/\s/g,'').split('').join('\n'):g.a)}</td>`:''}${k===0?`<td rowspan="${g.it.length}" class="gr">${br(String(g.b).replace(/ /g,'\n'))}</td>`:''}<td class="it" colspan="${all?2:1}">${br(it[0])}</td><td class="c">${br(it[1])}</td><td class="mk">${esc(it[2]||'')}</td><td class="mk">${esc(it[3]||'')}</td><td class="c">${br(it[4]||'')}</td></tr>`;
-      aDone[g.a]=1;
+    let rows='';const runs=[];let lr=null;groups.forEach((g,gi)=>{const p=groups[gi-1];if(!g.blank&&p&&!p.blank&&p.a===g.a&&lr){lr.n+=g.it.length;runs.push(null)}else{lr=g.blank?null:{n:g.it.length};runs.push(lr)}});
+    groups.forEach((g,gi)=>g.it.forEach((it,k)=>{
+      idx++;const ru=runs[gi];
+      const ab=g.blank?'<td></td><td></td>':`${ru&&k===0?`<td rowspan="${ru.n}" class="gr">${br(ru.n>4?String(g.a).replace(/\s/g,'').split('').join('\n'):g.a)}</td>`:''}${k===0?`<td rowspan="${g.it.length}" class="gr">${br(String(g.b).replace(/ /g,'\n'))}</td>`:''}`;
+      rows+=`<tr style="height:${h(itemPt)}">${ab}<td class="it" colspan="${all?2:1}">${br(it[0])}</td><td class="c">${br(it[1])}</td><td class="mk">${esc(it[2]||'')}</td><td class="mk">${esc(it[3]||'')}</td><td class="c">${br(it[4]||'')}</td></tr>`;
     }));
     let foot='';
     if(last){const L=all?3:2,Dc=all?1:1;const fr=footRows.map(h);
@@ -856,10 +856,11 @@ function choose(found){return new Promise(res=>{const m=$('#cfM');$('#cfT').text
 const flatToDef=(meta,rows)=>{
   const pages=[[]];let cg=null,curA='';
   for(const r of rows){
-    const t=String(r.t||'').trim();if(!t)continue;
+    const t=String(r.t||'').trim();
     if(r.brk&&pages.at(-1).length){pages.push([]);cg=null}
     const a=String(r.a||'').trim(),b=String(r.b||'').trim();
     if(a)curA=a;
+    if(!t&&!a&&!b){cg={a:'',b:'',blank:true,it:[]};pages.at(-1).push(cg);cg.it.push(['',String(r.r||'').trim(),String(r.p1||'').trim(),String(r.p2||'').trim(),String(r.act||'').trim()]);cg=null;continue}/* 빈 줄: 엑셀처럼 따로 빈 칸 */
     if(!cg||a||b){cg={a:curA,b:b||(a?'':cg?.b||''),it:[]};pages.at(-1).push(cg)}
     cg.it.push([t,String(r.r||'').trim(),String(r.p1||'').trim(),String(r.p2||'').trim(),String(r.act||'').trim()]);
   }
@@ -899,8 +900,8 @@ function checklistsFromGrid(sheetName,g){
       if(nt.includes('점검일')){for(let k=r;k<=r+5;k++)if(norm(rowText(k)).includes('총괄'))cur.sign4=true}
       let k=r;while(k<=maxR&&!norm(rowText(k)).startsWith('첨부자료')&&k<r+8)k++;r=k;cur.open=false;continue;
     }
-    const t=String(row[col.it]??(top(r,col.it)[0]===r?val(r,col.it):'')).trim();
-    if(!t)continue;
+    if(top(r,col.it)[0]!==r)continue;/* 위 칸과 병합된 줄은 앞 항목의 일부 */
+    const t=String(row[col.it]??val(r,col.it)).trim();/* 빈 줄도 엑셀 양식 그대로 유지 */
     const aTop=top(r,col.a),bTop=col.b!=null?top(r,col.b):null;
     cur.rows.push({brk:cur.brkNext,a:aTop[0]===r?val(r,col.a):'',b:bTop&&bTop[0]===r?val(r,col.b):'',t,r:col.ref!=null?val(r,col.ref):'',p1:col.res!=null?String(row[col.res]||''):'',p2:col.res2!=null?String(row[col.res2]||''):'',act:col.act!=null?val(r,col.act):''});
     cur.brkNext=false;
