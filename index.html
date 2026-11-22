@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>검측요청서 작성기</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#c00000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="검측요청서">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 현장 사무소의 결재 서류철 — 담백하고 정확하게
+   IDEA: 엑셀 양식을 그대로 옮긴 A4 서류 묶음, 한 장씩 넘기며 채운다
+   PICTURE: 오른쪽(모바일은 아래)에 실제 출력될 A4 미리보기
+   COLOUR and TYPE: 석회색 바탕, 흰 서류, 검정 괘선, 양식의 붉은 배지(#c00000)를 강조색으로 / Noto Sans KR
+   LAYOUT: 상단 고정 바 + 시트 탭, 좌측 입력 폼, 우측 미리보기 */
+:root{color-scheme:light dark;--bg:light-dark(#e7e4df,#171513);--panel:light-dark(#fff,#211f1c);--ink:light-dark(#151412,#ece8e2);--mute:light-dark(#6b665f,#a39d94);--line:light-dark(#d4cfc7,#3a3631);--acc:#c00000;--acc2:light-dark(#fbeaea,#3a1d1d)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Noto Sans KR',system-ui,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:10px;padding:10px max(3vw,12px);flex-wrap:wrap}
+.sync{font-size:12px;color:var(--mute);white-space:nowrap}
+.sync.ok{color:light-dark(#16794a,#5fd39a)}.sync.warn{color:var(--acc)}
+.appbtn{border-color:var(--acc);color:var(--acc);font-weight:700}
+.bar h1{font-size:18px;margin:0;font-weight:700;white-space:nowrap}
+.bar h1 b{display:inline-block;background:var(--acc);color:#fff;font-size:12px;padding:2px 8px;margin-right:8px;vertical-align:2px;font-weight:500}
+.docsel{flex:1 1 260px;display:flex;gap:6px}
+.docsel select{flex:1}
+.docsel .catsel{flex:0 0 auto;width:auto;max-width:42%;font-weight:700;border-color:var(--acc)}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:0 max(3vw,12px);scrollbar-width:none}
+.tabs button{flex:none;border:0;background:none;padding:10px 14px;border-bottom:3px solid transparent;color:var(--mute);font-weight:500;min-height:44px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.tabs button .n{font-size:12px;color:var(--mute);margin-left:4px}
+main{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;padding:20px max(3vw,12px) 80px;max-width:1500px;margin:0 auto;align-items:start}
+@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+.form{background:var(--panel);border:1px solid var(--line);padding:16px;display:grid;gap:14px}
+.form h2{font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.form h3{font-size:14px;margin:6px 0 -4px;color:var(--mute);font-weight:500;border-top:1px solid var(--line);padding-top:12px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+label.f>span{font-weight:500}
+input[type=text],input[type=date],input:not([type]),select,textarea{width:100%;font-size:16px;padding:9px 10px;border:1px solid var(--line);background:light-dark(#fbfaf8,#1a1816);border-radius:4px;min-height:44px}
+textarea{min-height:64px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;min-height:44px;border-radius:4px;font-weight:500;white-space:nowrap}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.s{min-height:36px;padding:4px 10px;font-size:14px}
+.btn:disabled{opacity:.5}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px;min-height:36px}
+.chk input{width:20px;height:20px;accent-color:var(--acc)}
+.signrow{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:8px;align-items:end}
+.sigbtn{height:44px;border:1px dashed var(--mute);background:light-dark(#fff,#2a2724);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mute);overflow:hidden;padding:2px}
+.sigbtn img{max-height:38px;max-width:100%}
+.item{border:1px solid var(--line);border-radius:4px;padding:10px;display:grid;gap:8px;background:light-dark(#fbfaf8,#1a1816)}
+.item .hd{display:flex;gap:6px;align-items:center;justify-content:space-between;font-size:13px;color:var(--mute)}
+.item .acts{display:flex;gap:4px;flex-wrap:wrap}
+.ck{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.ck .g{grid-column:1/-1;font-size:12px;color:var(--mute);font-weight:700;margin-top:6px}
+.tog{min-width:56px;min-height:40px;border:1px solid var(--line);background:var(--panel);border-radius:4px;font-size:14px}
+.tog small{display:block;font-size:10px;color:var(--mute);line-height:1}
+.tog.v{background:var(--acc2);border-color:var(--acc);font-weight:700}
+.ph{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px}
+.ph .th{width:96px;height:72px;background:light-dark(#eee,#333) center/cover no-repeat;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mute);text-align:center}
+.drop{position:relative;border:2px dashed var(--acc);border-radius:6px;padding:14px 12px;text-align:center;background:var(--acc2);font-weight:700;display:grid;gap:2px;min-height:64px;align-content:center}
+.drop small{font-weight:400;font-size:12px;color:var(--mute)}
+.drop input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:40px}
+.drop.over{outline:3px solid var(--acc)}
+.drop:focus-within{outline:2px solid var(--acc);outline-offset:2px}
+.th{position:relative}.th input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+@media(max-width:600px){.drop small.pc{display:none}}
+.ced{position:fixed;inset:0;z-index:55;background:var(--bg);display:none}
+.ced.on{display:block}
+.cedin{height:100%;display:flex;flex-direction:column;gap:10px;padding:10px max(2vw,10px);max-width:1300px;margin:0 auto}
+.cedhd{display:flex;gap:8px;align-items:center}.cedhd .sp{flex:1}.cedhd b{font-size:17px}
+.cedmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+#ceGrid td.ck{text-align:center}#ceGrid td.ck input{width:20px;height:20px;min-height:0;accent-color:var(--acc)}
+.gtool{display:flex;gap:6px;flex-wrap:wrap}
+.gwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+.grid{border-collapse:collapse;width:100%;table-layout:fixed;font-size:15px}
+.grid th{position:sticky;top:0;background:light-dark(#efece7,#2a2724);font-size:13px;font-weight:500;color:var(--mute);border:1px solid var(--line);padding:6px 2px;z-index:1}
+.grid tbody th{position:sticky;left:0;top:auto;z-index:0;cursor:pointer;font-size:12px}
+.grid td{border:1px solid var(--line);padding:0}
+.grid input{border:0;border-radius:0;min-height:38px;padding:4px 8px;background:transparent;font-size:15px;width:100%}
+.grid input:focus{outline:2px solid var(--acc);outline-offset:-2px;background:var(--acc2)}
+.grid tr.sel th,.grid tr.sel td{background:var(--acc2)}
+.gsig{width:100%;height:38px;border:0;background:none;color:var(--mute);font-size:13px;display:flex;align-items:center;justify-content:center;padding:1px}
+.gsig img{max-height:34px;max-width:100%}
+main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+@media(max-width:900px){main.wide{grid-template-columns:minmax(0,1fr)}}
+.grid{min-width:560px}
+.hint{font-size:13px;color:var(--mute);margin:0}
+.pv{position:relative;--k:.5}
+.pvw{width:calc(794px * var(--k));height:calc(1123px * var(--k));margin:0 auto 16px;box-shadow:0 1px 3px rgba(0,0,0,.25);background:#fff;overflow:hidden}
+.pvw>.page{transform:scale(var(--k));transform-origin:0 0}
+.pvcap{font-size:13px;color:var(--mute);text-align:center;margin:-10px 0 14px}
+.empty{padding:40px 16px;text-align:center;color:var(--mute);border:1px dashed var(--line)}
+.fab{position:fixed;right:16px;bottom:16px;z-index:25;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+/* ---------- A4 page ---------- */
+.page{width:794px;height:1123px;background:#fff;color:#000;font-family:'Noto Sans KR',sans-serif;position:relative;overflow:hidden;font-size:13px;line-height:1.35}
+.page table{border-collapse:collapse;width:100%;table-layout:fixed}
+.page td,.page th{border:1px solid #000;padding:2px 6px;vertical-align:middle;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+.page th{font-weight:700;background:#e6e6e6}
+.j{display:flex;justify-content:space-between}.j i{font-style:normal}
+.c{text-align:center}.b{font-weight:700}
+.sg{position:relative;display:inline-block;white-space:nowrap}
+.sg .in{position:relative;display:inline-block}
+.sg .in img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-height:40px;max-width:64px;width:auto;height:auto;pointer-events:none}
+/* 검측요청서 */
+.rq{position:absolute;left:84px;right:84px;top:66px;bottom:52px;border:2px solid #000;padding:0 22px}
+.rq .badge{position:absolute;top:0;right:0;background:#c00000;color:#fff;font-size:11px;letter-spacing:3px;padding:6px 26px;font-weight:700}
+.rq .re{position:absolute;top:34px;right:22px;color:#c00000;font-size:22px;font-weight:700}
+.rq h1{text-align:center;font-size:25px;letter-spacing:5px;margin:36px 0 28px}
+.rq .ln{display:flex;gap:14px;font-weight:700;margin:9px 0;align-items:baseline}
+.rq .ln .l{width:64px;flex:none}
+.rq .ln .l .j{width:52px}
+.rq table td{height:29px;font-weight:700}
+.rq table td.lb{width:142px}
+.rq .sign{margin:46px 0 0 auto;width:300px;font-weight:700}
+.rq .sign div{display:flex;justify-content:space-between;margin:12px 0}
+.rq .dash{border-top:2px dashed #000;margin:22px -22px 0}
+.rq h2{text-align:center;font-size:14px;letter-spacing:3px;margin:30px 0 26px}
+.rq .foot{position:absolute;left:0;right:0;bottom:0;border-top:2px dashed #000;padding:6px 0 4px;font-weight:700;font-size:12.5px;line-height:1.7}
+/* 체크리스트 */
+.cl{position:absolute;left:84px;right:84px;top:66px}
+.cl td,.cl th{font-size:inherit;padding:1px 4px;line-height:1.25}
+.cl .ttl{font-weight:700;letter-spacing:1px;text-align:center}
+.cl .gr{text-align:center;font-weight:500}
+.cl .it{padding-left:8px}
+.cl th.nw{font-size:.92em;white-space:nowrap;letter-spacing:-.3px;line-height:1.3;padding:1px 2px}
+.cl .mk{text-align:center;font-weight:700}
+/* 시공도면 */
+.dw{position:absolute;left:6px;right:14px;top:31px;bottom:40px;display:flex;flex-direction:column}
+.dw .tt{border:1px solid #000;height:36px;display:flex;align-items:center;justify-content:center;font-size:27px;letter-spacing:2px;margin-bottom:29px}
+.dw table td{text-align:center;font-size:14px;padding:0 6px}
+.dw .r1 td{height:37px}.dw .r2 td{height:25px}
+.dw td.nb{border-bottom:0}.dw td.nt{border-top:0}
+.dw .box{flex:1;margin-top:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #000;padding:6px}
+.dw .box img{max-width:100%;max-height:100%;display:block}
+.dw .box .ph0{margin-top:40%;color:#aaa;font-size:14px}
+/* 실명부 */
+.rs{position:absolute;left:52px;right:52px;top:56px}
+.rs h1{text-align:center;font-size:20px;margin:0 0 22px}
+.rs .pj{font-size:11.5px;font-weight:700;margin-bottom:8px}
+.rs th{height:38px;font-size:12px}
+.rs td{height:30px;text-align:center;font-size:12px;padding:1px 3px}
+/* 사진대지 */
+.pd{position:absolute;left:104px;right:104px;top:66px;border:1px solid #000}
+.pd .tt{height:50px;background:#d9d9d9;border-bottom:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;text-decoration:underline;text-underline-offset:4px}
+.pd .slot{border-bottom:1px solid #000}
+.pd .slot:last-child{border-bottom:0}
+.pd .pa{height:392px;display:flex;align-items:center;justify-content:center;padding:14px 58px;border-bottom:1px solid #000}
+.pd .pa .fr{width:100%;height:100%;border:1px solid #000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pd .pa img{max-width:100%;max-height:100%;display:block}
+.pd table td{border-top:0;border-left:0;height:28px;text-align:center}
+.pd table tr td:last-child{border-right:0}
+.pd table tr:last-child td{border-bottom:0}
+.pd .ct{text-align:left;padding:3px 14px;line-height:1.75;height:48px}
+/* ---------- modals ---------- */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:12px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border-radius:6px;width:min(640px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;padding:14px}
+.mbox h3{margin:0;font-size:17px}
+#sigCv{width:100%;aspect-ratio:5/2;background:#fff;border:1px solid var(--line);touch-action:none;border-radius:4px}
+.mrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mrow .sp{flex:1}
+#ed{position:fixed;inset:0;z-index:60;background:#2b2926;display:none;flex-direction:column}
+#ed.on{display:flex}
+.etool{display:flex;gap:4px;padding:6px;background:#1c1b19;overflow-x:auto;align-items:center;flex:none}
+.etool button{flex:none;min-width:44px;min-height:44px;border:1px solid #444;background:#2f2d2a;color:#eee;border-radius:4px;font-size:13px;padding:0 8px}
+.etool button.on{background:#c00000;border-color:#c00000}
+.etool .sw{width:28px;min-width:28px;height:28px;min-height:28px;border-radius:50%;border:2px solid #555;padding:0}
+.etool .sw.on{border-color:#fff;outline:2px solid #c00000}
+.etool input[type=text]{width:140px;min-height:40px;background:#111;color:#fff;border-color:#444}
+.etool .sep{width:1px;height:30px;background:#444;flex:none;margin:0 4px}
+#edWrap{flex:1;overflow:auto;position:relative;display:grid;place-items:center}
+#edCv{background:#fff;touch-action:none;display:block}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#151412;color:#fff;padding:10px 16px;border-radius:4px;z-index:90;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+#busy{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;color:#fff;font-size:17px;flex-direction:column;gap:10px}
+#busy.on{display:flex}
+#stage{position:absolute;left:0;top:0;z-index:-1;width:794px}
+#busy{background:#1c1b19}
+@media(max-width:600px){.bar h1{font-size:16px}.row2{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="bar">
+    <button class="btn s appbtn" id="appBtn" title="앱으로 받기">⬇ 앱 받기</button>
+    <h1><b>중점품질</b>검측요청서 작성기</h1>
+    <div class="docsel">
+      <select id="catSel" aria-label="공종(대분류) 선택" class="catsel"></select>
+      <select id="ledSel" aria-label="문서번호 선택"></select>
+      <button class="btn s" id="newNo" title="새 문서번호 추가">+ 새 번호</button>
+    </div>
+    <span class="sync" id="syncSt" title="작성 내용 공유 상태">이 기기에 저장</span>
+    <button class="btn s" id="menuBtn">파일 ▾</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+<main>
+  <section class="form" id="form"></section>
+  <section class="pv" id="pv"></section>
+</main>
+<button class="btn p fab" id="pdfFab">PDF 저장</button>
+
+<div class="modal" id="menuM"><div class="mbox">
+  <h3>파일</h3>
+  <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
+  <button class="btn" id="mSave">작업파일 저장 (.json)</button>
+  <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
+  <button class="btn" id="mPass" style="display:none">팀 비밀번호 변경</button>
+  <button class="btn" id="mNew">새 검측요청서 (다음 번호로 만들기)</button>
+  <div class="mrow"><button class="btn" data-close>닫기</button></div>
+</div></div>
+
+<div id="ckEd" class="ced"><div class="cedin">
+  <div class="cedhd"><b>체크리스트 등록 · 수정</b><span class="sp"></span><button class="btn s" id="ceCancel">취소</button><button class="btn p s" id="ceSave">등록</button></div>
+  <div class="cedmeta">
+    <label class="f"><span>목록에 보일 이름</span><input id="ceName"></label>
+    <label class="f"><span>제목 (출력)</span><input id="ceTitle"></label>
+    <label class="f"><span>검사결과 칸 1</span><input id="ceC1"></label>
+    <label class="f"><span>검사결과 칸 2</span><input id="ceC2"></label>
+    <label class="f"><span>서명란</span><select id="ceS4"><option value="0">2명 (공종별 시공관리자 · 건축사보)</option><option value="1">4명 (총괄 시공·감리 책임자 포함)</option></select></label>
+  </div>
+  <p class="hint" id="ceMsg"></p>
+  <p class="hint">구분은 묶음의 첫 줄에만 쓰면 아래 줄은 같은 묶음으로 처리됩니다(엑셀 병합 칸처럼). ‘쪽’에 체크하면 그 줄부터 다음 쪽으로 넘어갑니다. 엑셀에서 여러 칸을 복사해 붙여넣을 수 있습니다.</p>
+  <div class="gtool"><button class="btn s" data-ce="add">+ 행 추가</button><button class="btn s" data-ce="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-ce="del">선택 행 삭제</button><button class="btn s" data-ce="up">▲</button><button class="btn s" data-ce="down">▼</button></div>
+  <div class="gwrap" style="max-height:none;flex:1"><table class="grid" id="ceGrid" style="min-width:900px"></table></div>
+</div></div>
+<div class="modal" id="appM"><div class="mbox" style="gap:12px">
+  <h3>앱으로 받기</h3>
+  <button class="btn p" id="apInstall" style="display:none">홈 화면에 앱 설치</button>
+  <p class="hint" id="apIos" style="display:none">아이폰: Safari 아래쪽 공유 버튼 → ‘홈 화면에 추가’를 누르면 앱처럼 설치됩니다.</p>
+  <div id="apDl">
+  <button class="btn" id="apHtml" style="width:100%;margin-bottom:8px">HTML 파일 받기<br><small style="font-weight:400;color:var(--mute)">PC·휴대폰에 저장해 두고 브라우저로 열어서 바로 사용</small></button>
+  <button class="btn" id="apZip" style="width:100%">앱 설치용 묶음 받기 (.zip)<br><small style="font-weight:400;color:var(--mute)">웹 주소에 올리면 휴대폰 홈 화면에 설치·오프라인 사용 가능</small></button>
+  </div>
+  <details><summary class="hint" style="cursor:pointer">설치용 묶음은 이렇게 쓰세요</summary>
+  <ol class="hint" style="padding-left:18px;margin:6px 0 0">
+   <li>zip 파일 압축을 풉니다(파일 5개).</li>
+   <li>PC 브라우저에서 app.netlify.com/drop 에 들어가 풀린 폴더를 통째로 끌어다 놓습니다(무료). GitHub Pages에 올려도 됩니다.</li>
+   <li>생긴 인터넷 주소를 휴대폰 Chrome·Safari로 열고 ‘앱 받기 → 홈 화면에 앱 설치’(아이폰은 공유 → 홈 화면에 추가)를 누릅니다.</li>
+   <li>설치 후에는 인터넷이 끊겨도 작성·PDF 저장이 됩니다(처음 한 번은 인터넷 연결 필요).</li>
+  </ol></details>
+  <p class="hint">작성 내용은 기기·주소마다 따로 저장됩니다. 옮길 때는 ‘파일 → 작업파일 저장/불러오기’를 쓰세요.</p>
+  <div class="mrow"><button class="btn" data-close>닫기</button></div>
+</div></div>
+<div class="modal" id="cfM"><div class="mbox"><h3 id="cfT"></h3><p class="hint" id="cfP"></p><div class="mrow"><button class="btn" id="cfN">취소</button><button class="btn p" id="cfY">확인</button></div></div></div>
+
+<div class="modal" id="sigM"><div class="mbox">
+  <h3 id="sigT">서명</h3>
+  <canvas id="sigCv" width="1000" height="400"></canvas>
+  <div class="mrow">
+    <button class="btn s" id="sigClr">지우기</button>
+    <button class="btn s" id="sigLib">저장된 서명 사용</button>
+    <button class="btn s" id="sigDel">서명 삭제</button>
+    <span class="sp"></span>
+    <button class="btn" data-close>취소</button>
+    <button class="btn p" id="sigOk">확인</button>
+  </div>
+</div></div>
+
+<div id="ed">
+  <div class="etool" id="edTool1"></div>
+  <div class="etool" id="edTool2"></div>
+  <div id="edWrap"><canvas id="edCv"></canvas></div>
+  <div class="etool" style="justify-content:flex-end">
+    <span id="edInfo" style="color:#aaa;font-size:13px;margin-right:auto;padding:0 6px"></span>
+    <button id="edCancel">취소</button><button id="edDone" class="on">편집 완료</button>
+  </div>
+</div>
+
+<div id="busy"><div id="busyT">처리 중…</div></div>
+<div class="toast" id="toast"></div>
+<div id="stage"></div>
+<input type="file" id="fileAny" hidden>
+
+<script>
+window.GCR_API=window.GCR_API||'https://gcr-api.wkdgy1125.workers.dev';
+const LEDGER=[["GH62-1-A-철콘-001","2025-10-23","철근콘크리트","A-1구간 (X0~X4 / Y'1~Y'3)","지상1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-002","2025-11-03","철근콘크리트","A-2구간 (X0~X6 / Y'3~Y'6)","지상1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-003","2025-11-11","철근콘크리트","A-1구간 (X1~X2 / Y'1)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-004","2025-11-04","철근콘크리트","A-2구간 (X2~X6 / Y'3~Y'6)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-005","2025-11-12","철근콘크리트","B-1구간 (X0~X6 / Y'6~Y'9)","지상1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-006","2025-11-17","철근콘크리트","B-1구간(X2~X6 / Y'6~Y'7)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-007","2025-11-19","철근콘크리트","C-1구간(X17~X21 / Y'12~Y'17)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-008","2025-11-20","철근콘크리트","C-1구간(X17~X20 / Y'12~Y'16)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-009","","철근콘크리트","C-2구간(X12~X17 / Y'16~Y'17)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-010","","철근콘크리트","B-2구간(X7~X11 / Y13~Y17)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-011","","철근콘크리트","C-2구간(X12~X17 / Y'12~Y'16)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-012","","철근콘크리트","B-2구간(X7~X11 / Y12~Y15)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-013","","철근콘크리트","A-3구간(X6~X12 / Y'1~Y'3)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-014","","철근콘크리트","A-3구간(X9~X12 / Y'1~Y'3)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-017","","철근콘크리트","A-3구간 일부(X8~X9 / Y'2~Y'3)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-018","","철근콘크리트","B-3구간(X9~X11 / Y7~Y12","지상1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-019","","철근콘크리트","B-4구간(X12~X17 / Y7~Y12)","지상1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-020","","철근콘크리트","B-1구간(X0~X7 / Y'5~Y'9), A-2구간(X0~X7 / Y'3~Y'8)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-021","","철근콘크리트","A-4구간(X12~X17 / Y1~Y4)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-022","","철근콘크리트","A-1구간(X0~X7 / Y'1~Y'4)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-023","","철근콘크리트","A-3구간(X6~X12 / Y'1~Y'4)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-024","","철근콘크리트","A-4구간(X12~X17 / Y4~Y7)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-025","","철근콘크리트","B-3구간(X9~X12 / Y7~Y12)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-026","","철근콘크리트","B-2구간(X8~X12 / Y12~Y17","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-027","","철근콘크리트","A-3-1구간(X6~X12 / Y'1~Y'4)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-028","","철근콘크리트","B-3-1구간(X9~X12 / Y7~Y12)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-029","","철근콘크리트","C-2구간(X12~X17 / Y12~Y17)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-030","","철근콘크리트","A-1-1구간(X4~X7 / Y'1)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-031","","철근콘크리트","C-1구간(X17~X21 / Y12~Y17)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-032","","철근콘크리트","C-3구간(X17~X21 / Y7~Y12)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-033","","철근콘크리트","B-4구간(X12~X17 / Y7~Y12)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-034","","철근콘크리트","C-2-1구간(X14~X16 / Y12~Y14)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-035","","철근콘크리트","A-4구간(X12~X17 / Y2~Y8)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-036","","철근콘크리트","A-3구간(X12~X17 / Y2~Y8)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-037","","철근콘크리트","A구간 코어(X2~X6 / Y'5~Y'7)","지하1층 벽체 및 바닥 스라브","벽체, 슬래브 철근배근",""],["GH62-1-A-철콘-038","","철근콘크리트","C-4구간(X17~X21 / Y1~Y8)","지하1층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-039","","철근콘크리트","C-4구간(X17~X21 / Y1~Y7)","지상1층 낮은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-040","","철근콘크리트","C-3구간(X17~X21 / Y7~Y12)","지하1층 코어 및 주변 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-041","","철근콘크리트","A-3구간(X8~X12 / Y3~Y7)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-042","","철근콘크리트","C-4구간(X17~X21 / Y1~Y7)","지상1층 높은바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-043","","철근콘크리트","합벽 1차(Y'1~Y'8)","지하1층 벽체","벽체 철근배근",""],["GH62-1-A-철콘-044","","철근콘크리트","B구간 코어 #4 (X12~X13 / Y10~Y13)","지하1층 코어벽체 및 스라브","벽체, 슬래브 철근배근",""],["GH62-1-A-철콘-045","","철근콘크리트","B-3구간 (X8~X12 / Y6~Y12)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-046","","철근콘크리트","합벽 2차(Y'1~Y'8)","지하1층 벽체","벽체 철근배근",""],["GH62-1-A-철콘-047","","철근콘크리트","A-1,A-2구간 기둥 일부(2-2,2-3,2-4,2-8,2-9,1,1-1,2)","지하1층 기둥","기둥 철근배근",""],["GH62-1-A-철콘-048","","철근콘크리트","B동 코어 #3 (X12~X13 / Y7~Y9)","지하1층 벽체 및 스라브","벽체, 슬래브 철근배근",""],["GH62-1-A-철콘-049","","철근콘크리트","남측 합벽 (Y14~Y17 / X13~X18)","지하1층 합벽","벽체 철근배근",""],["GH62-1-A-철콘-050","","철근콘크리트","B-2구간 (X9~X14 / Y12~Y17)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-051","","철근콘크리트","A-3구간 일부 (X5~X10 / Y1)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-052","","철근콘크리트","A-1구간 (X0~X7 / Y'1~Y'4)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-053","","철근콘크리트","A-2구간 (X0~X6 / Y'3~Y'7)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-054","","철근콘크리트","B-1구간 (X0~X7 / Y'6~Y'9)","지하2층 바닥 스라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-055","","철근콘크리트","B2F C2 (X12~X17 / Y12~Y17)","슬라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-056","","철근콘크리트","B2F C3 (X19~X21 / Y8~Y12)","슬라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-057","","철근콘크리트","1F A동 코어 #2 EV","(X4~X6, Y'6~Y'7) 벽체 및 슬라브","철근, 거푸집, 동바리",""],["GH62-1-A-철콘-058","","철근콘크리트","B2F C1","(X17~X21/ Y11~Y17)슬라브","데크플레이트, 슬래브 철근배근",""],["GH62-1-A-철콘-059","","철근콘크리트","B1F 남측합벽","(X7~X10)","철근, 거푸집, 동바리",""],["GH62-1-A-철콘-060","","철근콘크리트","B1F 동측합벽 DOWEL","(Y7~Y10, Y14~Y16, X21)","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-061","","철근콘크리트","B2F C3 (X19~X21 / Y8~Y12)","(X19~X21/ Y8~Y12)슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-062","","철근콘크리트","B2F B4","(X13~X17 / Y9~Y12)슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-063","","철근콘크리트","B2F A동코어 #1,#2","(X2~X6 / Y'5~Y'7) #1,2 슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-064","","철근콘크리트","B2F A4","(X12~X17 / Y5~Y7) 슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-065","","철근콘크리트","B2F C4","(X17~X21/ Y3~Y7) 슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-066","","철근콘크리트","1F A동 코어","(X2~X6 / Y'5~Y'6) #1,2 벽체","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-067","","철근콘크리트","B1F 남측합벽","(X13~X18) 벽체","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-068","","철근콘크리트","B2F A4-1","(X9~X12 / Y3~Y5) 슬라브","철근, 거푸집, 데크, 동바리",""],["GH62-1-A-철콘-069","2026-10-12","철근콘크리트","B1F A1,A2,B1,B3","(X0~X4, Y'1~Y'8),  (X11~X12/Y9~Y11) 기둥","철근, 거푸집, 데크, 동바리","2026-10-12"],["GH62-1-A-철콘-070","2026-10-12","철근콘크리트","B1F C동코어","#5,6 (X18~X20/Y5~Y13)벽체","철근, 거푸집, 데크, 동바리","2026-10-12"],["GH62-1-A-철콘-071","2026-10-14","철근콘크리트","B2F B동코어","(X12~13/ Y7~Y12) 슬라브","철근, 거푸집, 데크, 동바리","2026-10-14"],["GH62-1-A-철콘-072","2026-10-15","철근콘크리트","B2F C4 잔여구간","(X17~X21/ Y1~Y4) 슬라브","철근, 거푸집, 데크, 동바리","2026-10-15"],["GH62-1-A-철콘-073","2026-10-20","철근콘크리트","B1F 기둥","(X1~X6, Y'1~Y'8),  (X11~X12/Y9~Y11) 기둥 (6EA)","철근, 거푸집, 데크, 동바리","2026-10-20"],["GH62-1-A-철콘-074","2026-10-21","철근콘크리트","1F B동코어","(X12~X13 /Y7~Y13)벽체,슬라브","철근, 거푸집, 데크, 동바리","2026-10-21"],["GH62-1-A-철콘-075","2026-10-27","철근콘크리트","B2F C동코어","(X18~X19/ Y5~Y14)슬라브","철근, 거푸집, 데크, 동바리","2026-10-27"],["GH62-1-A-철콘-076","2026-10-28","철근콘크리트","B1F 기둥","(X2~X6, Y'1~Y'8),  (X11~X12/Y9~Y11) 기둥 (7EA)","철근, 거푸집, 데크, 동바리","2026-10-28"],["GH62-1-A-철콘-077","2026-10-29","철근콘크리트","B2F 서측합벽","(Y'1~Y'6)","철근, 거푸집, 데크, 동바리","2026-10-29"],["GH62-1-A-철콘-078","2026-11-02","철근콘크리트","B1F A2구간","(X6~X7/ Y'4)기둥(2EA)","철근, 거푸집, 데크, 동바리","2026-11-02"],["GH62-1-A-철콘-079","2026-11-02","철근콘크리트","B1F 동측합벽","(X7~X10/ Y14~Y16)벽체","철근, 거푸집, 데크, 동바리","2026-11-02"],["GH62-1-A-철콘-080","2026-11-04","철근콘크리트","B2F 서측합벽","(Y'6~Y'8)벽체","철근, 거푸집, 데크, 동바리","2026-11-04"],["GH62-1-A-철콘-081","2026-11-12","철근콘크리트","B1F B1구간 베이스","(X1~X6/Y'8~Y'9)합벽","철근, 거푸집, 데크, 동바리","2026-11-12"],["GH62-1-A-철콘-082","2026-11-12","철근콘크리트","B1F B2,B3,C3구간","(X7~X16/ Y'4~Y'9) 기둥","철근, 거푸집, 데크, 동바리","2026-11-12"],["GH62-1-A-철콘-083","2026-11-13","철근콘크리트","2F A동코어#1,2","(X2~X6/Y'5~Y'6) 벽체및 슬라브","철근, 거푸집, 데크, 동바리","2026-11-13"],["GH62-1-A-철콘-084","2026-11-13","철근콘크리트","B1F A4구간 타워3호기","(X15~X16 / Y'4~Y'5)기둥","철근, 거푸집, 데크, 동바리","2026-11-13"],["GH62-1-A-철콘-085","2026-11-15","철근콘크리트","층 / 존 / 부위","(X 열 / Y열 ) 부위","철근, 거푸집, 데크, 동바리","2026-11-15"]];
+const PEOPLE=[];
+
+</script>
+<script>
+{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const br=s=>esc(s).replace(/\n/g,'<br>');
+const fmtD=iso=>{if(!iso)return'';const[y,m,d]=iso.split('-');return `${y}. ${m}. ${d}`};
+const fmtYMD=iso=>{if(!iso)return'202&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;일';const[y,m,d]=iso.split('-');return `${y}년 ${+m}월 ${+d}일`};
+const sp=n=>{n=String(n||'').trim();return /^[가-힣]{2,4}$/.test(n)?n.split('').join(n.length==2?'  ':'  '):n};
+const J=s=>`<span class="j">${[...String(s).replace(/\s/g,'')].map(c=>`<i>${esc(c)}</i>`).join('')}</span>`;
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const toast=(m,t=2600)=>{const e=$('#toast');e.textContent=m;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),t)};
+const busy=(m)=>{$('#busy').classList.toggle('on',!!m);if(m)$('#busyT').textContent=m};
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+/* ---------- 체크리스트 정의 (엑셀 시트 그대로) ---------- */
+const CK={
+ deck:{name:'데크',cols:['시공사','감리단'],pages:[[{a:'기본 업무',b:'데크',it:[['데크 강판 및 철근 규격은 승인된 규격과 일치하는가?','시공상세도'],['데크의 뒤틀림 현상은 없는가?','시공상세도'],['데크 시공시 불순물은 제거하였는가?','시공상세도'],['데크의 걸침 길이는 충분한가?','시공상세도'],['데크 연결부위는 콘크리트가 새지 않도록 밀실하게 조치하였는가?','시공상세도'],['시공된 데크의 이상 유무는 확인하였는가?','시공상세도'],['데크 설치 후 청결상태는 확인하였는가?','시공상세도']]}]]},
+ rebar:{name:'철근',cols:['시공사','감리단'],pages:[[{a:'기본 업무',b:'먹매김',it:[['시공 기준먹선의 정확성을 확인하였는가?','','N/A'],['시공 기준먹선에서 각 지점별 먹선의 정확성은 확인하였는가?','','N/A'],['상하부층 수직 상태를 확인하였는가?','','N/A']]},{a:'기본 업무',b:'철근',it:[['철근 배근 규격, 간격은 도면과 일치하는가?','구조도면'],['철근의 정착, 이음길이는 구조일반사항을 준수하였는가?','구조일반사항'],['피복두께는 적정한가?','구조일반사항'],['보강근 설치는 적정한가?','구조도면'],['슬래브 OPEN부 보강근의 규격, 개소, 정착길이, 간격은 확인하였는가?','구조일반사항'],['스페이서의 규격 및 설치상태는 양호한가?','구조일반사항'],['철근 결속상태는 적정한가?',''],['보 주근의 순간격은 확보하였는가?','구조도면'],['배근된 철근에 녹, 기름 등 이물질 유무를 확인하였는가?',''],['철골보 스터드볼트 타격 시험 결과는 적정한가?',''],['커플러의 규격은 적정한가?','표준시방서'],['데크철근 절단부위의 보강철근 배치는 적정한가?','인장이음길이 확보'],['기둥 주위 데크 상/하부 연결근 배치는 적정한가?','인장정착길이 확보']]}]]},
+ pour:{name:'타설',cols:['시공사','감리단'],pages:[[{a:'',b:'거푸집',it:[['거푸집 표면청소 및 박리제 도포는 확인하였는가?','','N/A'],['동바리 수직도 및 체결상태는 적정한가?','','N/A'],['거푸집 및 동바리 설치는 구조계산서 규격, 간격으로 설치되었는가?','구조계산서','N/A'],['지하주차장 합벽지지대, 벽체거푸집은 구조계산서 단면도와 같이 시공되었는가?','구조계산서','N/A'],['거푸집 변형 여부는 확인하였는가?','','N/A']]},{a:'',b:'타설',it:[['타설 전 청소 상태는 양호한가?',''],['지수판의 위치, 고정상태는 양호한가?','표준시방서'],['보양상태는 양호한가?','']]}]]},
+ all:{name:'통합(철근·거푸집·타설)',cols:['적합','부적합'],pages:[
+  [{a:'기본업무',b:'먹메김',it:[['시공 기준먹선 확인','설계도서'],['시공 기준먹선에서 각 지점별 먹선 확인','표준시방서'],['상.하부층 수직상태 확인','설계도서']]},
+   {a:'기본업무',b:'철근 조립 배근',it:[['철근 규격, 개수, 간격 확인','설계도서'],['정착길이, 굽힘 정착 깊이 확인','설계도서'],['이음 위치 와 이음 길이 확인','설계도서'],['철근 상호 간격 확인','설계도서'],['결속선의 위치 및 간격유지 확인','설계도서'],['피복두께, 간격 유지근 등 확인','설계도서'],['철골 보 스터드 규격 및 설치간격,타격시험 확인','설계도서'],['데크 절단부위 보강철근 배치 확인','설계도서'],['기둥주위 상/하부 연결근 배치 확인','설계도서'],['배근검사 후 처리 확인','설계도서'],['보강부분 확인','설계도서'],['보강근의 개수, 지름, 길이, 방법 확인','설계도서'],['재검사여부 확인','현장확인']]},
+   {a:'기본업무',b:'콘크리트 배합',it:[['KS규격 공장의 레디믹스트 콘크리트인지 확인','공장검수'],['레미콘 배합보고서 및 송장 확인','설계도서']]},
+   {a:'기본업무',b:'타설 준비',it:[['구조체(기둥, 보, 내력벽, 슬라브 두께 등) 확인','현장확인'],['단열재의 시공장소(지붕슬래브,보,벽)확인','설계도서'],['설비용 매설물(건축, 전기, 기계공사)확인','설계도서']]},
+   {a:'기본외업무',b:'철근 조립 배근',it:[['철근조립 배근관련 도서 확인','설계도서'],['커플러 규격 확인','설계도서']]},
+   {a:'기본외업무',b:'거푸집 자재',it:[['합판 두께 확인','자재승인서'],['박리제 종류 확인','자재승인서'],['합판, 박리제 검사 등 확인','현장확인'],['각 마감에 적합한 거푸집 확인','현장확인'],['거푸집 변형 및 손상 여부 확인','현장확인']]}],
+  [{a:'기본외업무',b:'거푸집 조립',it:[['거푸집 수직 조립 확인(층높이, 개구부 등)','표준시방서\n(25mm이내)'],['거푸집 안 치수 확인','(표준시방서\n외벽두께3% 이내)'],['스페이셔 크기와 거푸집 및 철근과의 간격 확인','현장확인'],['바닥판,보밑의 레벨확인(층높이, 판두께, 단차, 단면, 수평도 중앙 부풀음)','현장확인']]},
+   {a:'기본외업무',b:'데크 플레이트',it:[['철골 수평재 방청도장 완료 확인','현장확인'],['DECK PLATE 강판 및 철근 규격 확인','자재승인서'],['DECK PLATE 규격별 제위치 설치 확인','설계도서'],['DECK PLATE 간 이음부 연결 확인','현장확인'],['DECK PLATE 걸침 길이 확인','현장확인'],['DECK PLATE 상부 철근 규격, 간격, 정착.이음길이, 피복두께 확인','설계도서'],['DECK PLATE 연결부 틈새 조치 확인','현장확인']]},
+   {a:'기본외업무',b:'거푸집 동바리',it:[['동바리 규격 및 설치 간격 확인','구조계산서'],['동바리 수직도 확인','현장확인'],['동바리 수평 연결상태 확인','현장확인'],['동바리 존치 기간 준수 확인','품질관리'],['필러 설치 여부 확인','시공계획서']]},
+   {a:'기본외업무',b:'콘크리트 타설 계획서',it:[['타설 구획, 타설량 확인, 검토','타설계획서'],['배차 대수, 도로 상황 확인, 검토','타설계획서'],['펌프카의 붐 및 회전 반경 등 확인, 검토','타설계획서'],['인원배치(각 직종의 인원수), 타설장비(다짐기) 배치여부','타설계획서']]},
+   {a:'기본외업무',b:'콘크리트 타설준비',it:[['보양 시트 준비 확인\n(강우, 저온, 여름철 일사량 과다 시 특히 유의)','타설계획서'],['타설 30분~1시간 전 거푸집 내부 청소상태 확인','현장확인']]},
+   {a:'기본외업무',b:'콘크리트 타설',it:[['슬럼프와 공기량 확인','배합보고서'],['다짐기 기준대로 사용 확인','현장확인'],['콘크리트면 고르기 확인 (휘니셔)','설계도서']]}]]}
+};
+CK.all.wide=CK.all.sign4=true;CK.all.title='공종별 감리 체크리스트';
+const ckItems=t=>CK[t].pages.flat().flatMap(g=>g.it);
+const MARKS=['','○','✕','N/A'];
+const BUILDER=['김장효','김동식','장버들'], SUPER=['이돈석','장건','유일재','김세환','임재강'];
+
+/* ---------- 상태 ---------- */
+const SECS=[['req','검측요청서'],['chk','체크리스트'],['dwg','시공도면'],['ros','실명부'],['pho','사진대지'],['out','출력']];
+const blankDoc=()=>({
+ led:'',
+ inc:{req:true,chk:true,dwg:true,ros:true,pho:true},
+ req:{no:'',date:today(),to:'가양동 CJ공장부지 특별계획구역 1BL 감리단',loc:'철근콘크리트',part:'',reqDate:today(),items:'',attach:'검측 체크리스트, 관련 도면, 공사참여자(기능공 포함) 실명부, 사진대지',
+   staff:{name:'김장효',sig:''},agent:{name:'김동식',sig:''},badge:true,re:false,
+   rNo:'',rTo:'가양동 CJ공장부지 특별계획구역 1BL 현장 대리인',result:'',rDate:'',note:'',rAttach:'검측 체크리스트 담당 감리원 검측 결과',sup1:{name:'이돈석',sig:''},sup2:{name:'장건',sig:''}},
+ chk:{type:'deck',work:'철근콘크리트',sub:'',part:'',pos:'',marks:{},acts:{},cDate:today(),sDate:'',attach:'',
+   c1:{name:'김동식',sig:''},c2:{name:'장버들',sig:''},s1:{name:'장건',sig:''},s2:{name:'',sig:''}},
+ dwg:{work:'철근콘크리트',sub1:'',sub2:'데크플레이트 / 철근 시공',list:[]},
+ ros:{date:today(),loc:'',rows:PEOPLE.map(p=>({id:uid(),org:p[0],pos:p[1],name:p[2],birth:p[3],work:p[4],sig:''}))},
+ pho:[]
+});
+let S={project:'가양동 CJ공장부지 특별계획구역 1BL',ledger:LEDGER.map(r=>r.slice()),sigLib:{},doc:blankDoc()};
+let tab='req';
+const D=()=>S.doc;
+const getP=(o,p)=>p.split('.').reduce((a,k)=>a?.[k],o);
+const setP=(o,p,v)=>{const k=p.split('.');const l=k.pop();k.reduce((a,x)=>a[x],o)[l]=v};
+
+/* ---------- 저장 (IndexedDB) ---------- */
+let dbp=null;
+const idb=()=>dbp||(dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('gcr-app',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+const kvGet=async k=>{try{const db=await idb();return await new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}};
+const kvPut=async(k,v)=>{try{const db=await idb();db.transaction('kv','readwrite').objectStore('kv').put(v,k)}catch(e){}};
+let svT;const save=()=>{delete S.__fresh;clearTimeout(svT);svT=setTimeout(()=>{kvPut('state',S);kvPut('doc:'+curKeyOf(),D())},500);queueSync()};
+
+/* ---------- 검측대장 ---------- */
+const ledRow=no=>S.ledger.find(r=>r[0]===no);
+const DEFCATS=[{code:'철콘',name:'철근콘크리트',items:'철근, 거푸집, 데크, 동바리'},{code:'철골',name:'철골',items:'철골 세우기, 볼트 체결, 용접'}];
+const cats=()=>(S.cats&&S.cats.length)?S.cats:(S.cats=DEFCATS.map(c=>({...c})));
+const catOf=no=>{const p=String(no||'').split('-');return p.length>=2?p[p.length-2]:''};
+const curCat=()=>{const c=cats();if(!S.cat||!c.some(x=>x.code===S.cat))S.cat=catOf(D().led||D().req.no)||c[0].code;return S.cat};
+function fillLedSel(){
+  const cur=D().led,cc=curCat();
+  $('#catSel').innerHTML=cats().map(c=>`<option value="${esc(c.code)}"${c.code===cc?' selected':''}>${esc(c.name)}</option>`).join('')+'<option value="__add">+ 공종 추가…</option>';
+  const rows=S.ledger.filter(r=>catOf(r[0])===cc);
+  $('#ledSel').innerHTML=`<option value="">${rows.length?'문서번호 선택 ('+rows.length+'건)':'번호 없음 · ‘+ 새 번호’로 만드세요'}</option>`+rows.map(r=>`<option value="${esc(r[0])}"${r[0]===cur?' selected':''}>${esc(r[0].replace(/^.*-/,''))} · ${esc((r[3]+' '+r[4]).trim()||'(부위 미입력)')}</option>`).join('');
+}
+function fillFromLedger(no){
+  const r=ledRow(no);if(!r)return;const d=D();d.led=no;
+  const [a,date,loc,e,f,g]=r;const part=(e+' '+f).trim();
+  Object.assign(d.req,{no:a,loc:loc||d.req.loc,part,items:g,date:date||d.req.date,reqDate:date||d.req.reqDate});
+  Object.assign(d.chk,{work:loc||d.chk.work,sub:f,part:e});
+  d.dwg.sub1=g;d.ros.loc=e;
+  d.pho.forEach(p=>{if(!p.t1)p.t1=e});
+}
+const keyOf=no=>(encodeURIComponent(String(no||'draft')).replace(/%/g,'~').replace(/[^A-Za-z0-9_\-.~:@+]/g,'_').slice(0,180))||'draft';
+const curKeyOf=()=>keyOf(D().led||D().req.no);
+async function switchDoc(no,fresh){
+  const oldKey=curKeyOf();clearTimeout(syncT);if(DBX)await doSync();await kvPut('doc:'+oldKey,D());
+  const key=keyOf(no);const cached=fresh?null:await kvGet('doc:'+key);
+  if(cached&&cached.req){S.doc=cached;const b=blankDoc();for(const k of Object.keys(b))if(S.doc[k]===undefined)S.doc[k]=b[k]}
+  else{const keep=D().ros.rows.map(r=>({...r,sig:''}));S.doc=blankDoc();S.doc.ros.rows=keep;seedMarks();fillFromLedger(no);if(!ledRow(no)){S.doc.led=no;S.doc.req.no=no}}
+  kvPut('state',S);render();if(DBX)openDoc(key);
+}
+function applyLedger(no){switchDoc(no).then(()=>toast(`${no} 검측요청서를 열었습니다`))}
+function nextNo(){
+  const cc=curCat();const rows=S.ledger.filter(r=>catOf(r[0])===cc);
+  const nums=rows.map(r=>+(r[0].match(/(\d+)$/)||[0,0])[1]);
+  const tmpl=(S.ledger[0]?.[0]||'GH62-1-A-철콘-000').split('-');tmpl[tmpl.length-2]=cc;tmpl[tmpl.length-1]='';
+  return tmpl.join('-')+String(Math.max(0,...nums)+1).padStart(3,'0');
+}
+
+/* ---------- 페이지 HTML ---------- */
+const sigH=(o,wide)=>`<span class="sg${wide?' w':''}">${esc(sp(o.name))}&nbsp;&nbsp;&nbsp;&nbsp;<span class="in">(인)${o.sig?`<img src="${o.sig}" alt="">`:''}</span></span>`;
+function pgReq(){
+  const r=D().req;
+  return `<div class="page"><div class="rq">
+  ${r.badge?'<div class="badge">중점품질관리공종</div>':''}${r.re?'<div class="re">(재)</div>':''}
+  <h1>검측요청서</h1>
+  <div class="ln"><span class="l">${J('번호')}</span>:<span style="flex:1">${esc(r.no)}</span><span>${fmtD(r.date)}</span></div>
+  <div class="ln"><span class="l">${J('수신')}</span>:<span>${esc(r.to)}</span></div>
+  <div class="ln" style="margin-top:12px">다음과 같은 세부공종에 대하여 검측요청하오니 검사 후 승인하여 주시기 바랍니다.</div>
+  <table style="margin-top:28px"><tr><td class="lb">${J('위치및공종')}</td><td>${esc(r.loc)}</td></tr><tr><td class="lb">${J('검측부위')}</td><td>${esc(r.part)}</td></tr><tr><td class="lb">${J('검측요구일시')}</td><td>${fmtD(r.reqDate)}</td></tr><tr><td class="lb">${J('검측사항')}</td><td>${esc(r.items)}</td></tr></table>
+  <div class="ln"><span class="l">${J('붙임')}</span>:<span>${esc(r.attach)}</span></div>
+  <div class="sign" style="margin-top:72px"><div><span>시공사 담당직원 :</span>${sigH(r.staff)}</div><div><span>현 장 대 리 인 :</span>${sigH(r.agent)}</div></div>
+  <div class="dash"></div>
+  <h2>검측결과통보</h2>
+  <div class="ln"><span class="l">${J('번호')}</span>:<span>${esc(r.rNo)}</span></div>
+  <div class="ln"><span class="l">${J('수신')}</span>:<span>${esc(r.rTo)}</span></div>
+  <div class="ln" style="margin-top:30px"><span style="width:120px">검측요청서</span><span style="width:160px">${esc(r.no)}</span><span>에 대한 검측 결과를 다음과 같이 통보합니다.</span></div>
+  <table><tr><td class="lb">${J('검측결과')}</td><td>${esc(r.result)}</td><td style="width:130px" class="c">${J('검측일시')}</td><td style="width:130px" class="c">${fmtD(r.rDate)}</td></tr><tr><td class="lb">${J('특기사항')}</td><td colspan="3">${esc(r.note)}</td></tr></table>
+  <div class="ln"><span class="l">${J('붙임')}</span>:<span>${esc(r.rAttach)}</span></div>
+  <div class="sign" style="margin-top:40px"><div><span>담당 감리원 :</span>${sigH(r.sup1)}</div><div><span>총괄 감리원 :</span>${sigH(r.sup2)}</div></div>
+  <div class="foot">① 재검측시에는 붉은 글씨로 “(재)”를 우측 상단에 작성함<br>② 시공자가 재검측 요청을 할 때에는 잘못 시공한 기능공의 서명을 받아 그 명단을 첨부 하여야 함<br>③ 2부 작성하여 시공자, 감리원 각 1부 보관</div>
+  </div></div>`;
+}
+const CKSPEC={
+ std:{w:[8.625,13,42.625,18.25,8.625,13,13],title:39.95,meta:29.45,ch:[22.5,22.5],item:48,foot:[32.45,32.45,26.25],fs:11,tfs:20},
+ wide:{w:[4.75,13,9,30.125,18.5,6.75,13,9],title:24.95,meta:24,ch:[20.1,24],item:[21.95,23.1],foot:[21,21,21,24,24],fs:8,tfs:13,noRepeat:true}
+};
+function pgChk(){
+  const c0=D().chk,def=CK[c0.type]||CK.deck,all=!!def.wide,s4=!!def.sign4,T=all?8:7;
+  const sp=all?CKSPEC.wide:CKSPEC.std;const nn=o=>({name:o.name,sig:''});
+  const c={...c0,cDate:D().req.date,sDate:'',attach:'',c1:nn(c0.c1),c2:nn(c0.c2),s1:nn(c0.s1),s2:nn(c0.s2)};
+  const cols=def.cols||['시공사','감리단'];
+  const W=794-168,natW=sp.w.reduce((a,x)=>a+x*7+5,0),kx=W/natW,AV=1123-66-52;
+  const cg='<colgroup>'+sp.w.map(x=>`<col style="width:${((x*7+5)/natW*100).toFixed(2)}%">`).join('')+'</colgroup>';
+  const fsx=sp.fs*1.333*kx,px=pt=>pt*1.333;
+  const footRows=s4?sp.foot.slice(0,4):(all?[sp.foot[0],sp.foot[3]]:sp.foot.slice(0,2));
+  let idx=0;
+  const pages=def.pages.map((groups,pi)=>{
+    const n=Math.max(1,groups.reduce((s,g)=>s+g.it.length,0));const last=pi===def.pages.length-1,showTitle=!(sp.noRepeat&&pi>0);
+    const fixedPt=(showTitle?sp.title+sp.meta*2:0)+sp.ch[0]+sp.ch[1]+(last?footRows.reduce((a,x)=>a+x,0):0);
+    let itemPt=Array.isArray(sp.item)?sp.item[Math.min(pi,sp.item.length-1)]:sp.item;
+    if(def.custom)itemPt=Math.max(20,Math.min(48,(AV/1.333-fixedPt)/n));
+    const ky=Math.min(1,AV/px(fixedPt+itemPt*n));const h=pt=>(px(pt)*ky).toFixed(1)+'px';
+    const fs=(fsx*(ky<.9?Math.sqrt(ky):1)).toFixed(2);
+    const head=(showTitle?`<tr style="height:${h(sp.title)}"><td colspan="${all?4:3}" class="ttl" style="font-size:${(sp.tfs*1.333*kx*Math.min(1,Math.sqrt(ky))).toFixed(1)}px">${esc(def.title||'공종별 감리 검측 체크리스트')}</td><th>문서번호</th><td colspan="3" class="c">${esc(D().req.no)}</td></tr>
+     <tr style="height:${h(sp.meta)}"><th colspan="2">${J('공종')}</th><td colspan="${all?2:1}" class="c">${esc(c.work)}</td><th>세부공종</th><td colspan="3" class="c">${esc(c.sub)}</td></tr>
+     <tr style="height:${h(sp.meta)}"><th colspan="2">${J('부위')}</th><td colspan="${all?2:1}" class="c">${esc(c.part)}</td><th>위치</th><td colspan="3" class="c">${esc(c.pos)}</td></tr>`:'')
+     +`<tr style="height:${h(sp.ch[0])}"><th colspan="2" rowspan="2">구분</th><th rowspan="2" colspan="${all?2:1}">검 사 항 목</th><th rowspan="2">기준,참고사항</th><th colspan="2">검사결과</th><th rowspan="2">조치사항</th></tr><tr style="height:${h(sp.ch[1])}"><th>${esc(cols[0])}</th><th>${esc(cols[1])}</th></tr>`;
+    let rows='';const aSpan={};groups.forEach(g=>aSpan[g.a]=(aSpan[g.a]||0)+g.it.length);const aDone={};
+    groups.forEach(g=>g.it.forEach((it,k)=>{
+      idx++;
+      rows+=`<tr style="height:${h(itemPt)}">${!aDone[g.a]?`<td rowspan="${aSpan[g.a]}" class="gr">${br(aSpan[g.a]>4?String(g.a).replace(/\s/g,'').split('').join('\n'):g.a)}</td>`:''}${k===0?`<td rowspan="${g.it.length}" class="gr">${br(String(g.b).replace(/ /g,'\n'))}</td>`:''}<td class="it" colspan="${all?2:1}">${br(it[0])}</td><td class="c">${br(it[1])}</td><td class="mk">${esc(it[2]||'')}</td><td class="mk">${esc(it[3]||'')}</td><td class="c">${br(it[4]||'')}</td></tr>`;
+      aDone[g.a]=1;
+    }));
+    let foot='';
+    if(last){const L=all?3:2,Dc=all?1:1;const fr=footRows.map(h);
+      foot=s4?`<tr style="height:${fr[0]}"><th colspan="${L}" rowspan="2">시공자 점검일</th><td colspan="${T-L-4}" rowspan="2" class="c">${fmtYMD(c.cDate)}</td><th class="nw">총괄 시공 책임자</th><td colspan="3" class="c">${sigH(c.c1,1)}</td></tr><tr style="height:${fr[1]}"><th class="nw">공종별시공관리자</th><td colspan="3" class="c">${sigH(c.c2,1)}</td></tr>
+        <tr style="height:${fr[2]}"><th colspan="${L}" rowspan="2">감리자 점검일</th><td colspan="${T-L-4}" rowspan="2" class="c">${fmtYMD(c.sDate)}</td><th class="nw">총괄감리책임자</th><td colspan="3" class="c">${sigH(c.s1,1)}</td></tr><tr style="height:${fr[3]}"><th class="nw">건축사보<br>(공종별감리책임자)</th><td colspan="3" class="c">${sigH(c.s2,1)}</td></tr>`
+      :`<tr style="height:${fr[0]}"><th colspan="${L}">시공자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.cDate)}</td><th class="nw">공종별 시공 관리자</th><td colspan="3" class="c">${sigH(c.c2,1)}</td></tr>
+        <tr style="height:${fr[1]}"><th colspan="${L}">감리자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.sDate)}</td><th class="nw">건축사보<br>(공종별 감리책임자)</th><td colspan="3" class="c">${sigH(c.s2,1)}</td></tr>`;
+    }
+    return `<div class="page"><div class="cl" style="font-size:${fs}px"><table>${cg}${head}${rows}${foot}</table></div></div>`;
+  });
+  return pages.join('');
+}
+function pgDwg(){
+  const d=D().dwg,list=d.list.length?d.list:[{img:''}];
+  return list.map(it=>`<div class="page"><div class="dw"><div class="tt">시공 위치 도면</div>
+   <table><colgroup><col style="width:12.4%"><col style="width:36.4%"><col style="width:12.1%"><col></colgroup>
+   <tr class="r1"><td>공 사 명</td><td colspan="3">${esc(S.project)}</td></tr>
+   <tr class="r2"><td rowspan="2">공&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;종</td><td rowspan="2">${esc(d.work)}</td><td rowspan="2">세부공종</td><td class="nb">${esc(d.sub1)}</td></tr>
+   <tr class="r2"><td class="nt">${esc(d.sub2)}</td></tr></table>
+   <div class="box">${it.img?`<img src="${it.img}" alt="">`:'<span class="ph0">도면을 불러와 주세요</span>'}</div></div></div>`).join('');
+}
+const ROS_N=26;
+function pgRos(){
+  const r=D().ros,rows=r.rows.length?r.rows:[];const pages=Math.max(1,Math.ceil(rows.length/ROS_N));let h='';
+  for(let p=0;p<pages;p++){
+    const chunk=rows.slice(p*ROS_N,p*ROS_N+ROS_N);let tr='';
+    for(let i=0;i<ROS_N;i++){const x=chunk[i];
+      tr+=`<tr>${i===0?`<td rowspan="${ROS_N}" style="font-size:11.5px">${br(fmtD(r.date).replace(' ','\n'))}</td><td rowspan="${ROS_N}" style="font-size:11px">${br(r.loc)}</td>`:''}<td>${esc(x?.org)}</td><td>${esc(x?.pos)}</td><td>${esc(x?.name)}</td><td>${esc(x?.birth)}</td><td>${esc(x?.work)}</td><td style="position:relative">${x?.sig?`<img src="${x.sig}" alt="" style="height:26px;max-width:84px;display:block;margin:0 auto">`:''}</td></tr>`}
+    h+=`<div class="page"><div class="rs"><h1>공사 참여자(기능공 포함) 실명부</h1><div class="pj">■ ${esc(S.project.replace(/1BL$/,'1블록'))}</div>
+    <table><colgroup><col style="width:72px"><col style="width:84px"><col style="width:74px"><col style="width:68px"><col style="width:66px"><col style="width:76px"><col><col style="width:90px"></colgroup>
+    <tr><th>작업일</th><th>작업위치</th><th>소속</th><th>직위</th><th>성명</th><th>생년월일<br>(성별)</th><th>공사한내용</th><th>서명</th></tr>${tr}</table></div></div>`;
+  }
+  return h;
+}
+function pgPho(){
+  const ph=D().pho,n=Math.max(1,Math.ceil(ph.length/2));let h='';
+  for(let p=0;p<n;p++){
+    const slot=x=>`<div class="slot"><div class="pa"><div class="fr">${x?.img?`<img src="${x.img}" alt="">`:''}</div></div>
+     <table><colgroup><col style="width:70px"><col><col style="width:72px"><col style="width:200px"></colgroup><tr><td>일&nbsp;&nbsp;&nbsp;시</td><td>${fmtD(x?.date)}</td><td>위&nbsp;&nbsp;치</td><td>${esc(x?.loc)}</td></tr><tr><td>내&nbsp;&nbsp;&nbsp;용</td><td colspan="3" class="ct">${esc(x?.t1)}<br>${esc(x?.t2)}</td></tr></table></div>`;
+    h+=`<div class="page"><div class="pd"><div class="tt">사진 대지</div>${slot(ph[p*2])}${slot(ph[p*2+1])}</div></div>`;
+  }
+  return h;
+}
+const PG={req:pgReq,chk:pgChk,dwg:pgDwg,ros:pgRos,pho:pgPho};
+const pageCount=k=>({req:1,chk:(CK[D().chk.type]||CK.deck).pages.length,dwg:Math.max(1,D().dwg.list.length),ros:Math.max(1,Math.ceil(D().ros.rows.length/ROS_N)),pho:Math.max(1,Math.ceil(D().pho.length/2))})[k];
+
+/* ---------- 미리보기 ---------- */
+let pvT;
+function renderPv(){
+  const keys=tab==='out'?['req','chk','dwg','ros','pho'].filter(k=>D().inc[k]):[tab];
+  const pv=$('#pv');
+  if(!keys.length){pv.innerHTML='<div class="empty">출력할 시트를 하나 이상 선택해 주세요.</div>';return}
+  let total=0;
+  pv.innerHTML=keys.map(k=>{const tmp=document.createElement('div');tmp.innerHTML=PG[k]();return [...tmp.children].map(pg=>{total++;return `<div class="pvw" data-sec="${k}">${pg.outerHTML}</div><div class="pvcap">${total}쪽 · ${SECS.find(s=>s[0]===k)[1]}</div>`}).join('')}).join('');
+  fitPv();fitCl(pv);
+}
+function fitCl(root){root.querySelectorAll('.cl').forEach(cl=>{cl.style.transform='';const max=1123-66-52,h=cl.offsetHeight;if(h>max){cl.style.transformOrigin='top center';cl.style.transform=`scale(${(max/h).toFixed(4)})`}})}
+function fitPv(){const pv=$('#pv');const w=Math.min(pv.clientWidth,794);pv.style.setProperty('--k',(w/794).toFixed(4))}
+const pvRO=new ResizeObserver(fitPv);pvRO.observe($('#pv'));
+const schedPv=()=>{clearTimeout(pvT);pvT=setTimeout(renderPv,120)};
+
+/* ---------- 폼 ---------- */
+const inp=(k,label,type='text',ph='')=>`<label class="f"><span>${label}</span><input type="${type}" data-k="${k}" value="${esc(getP(D(),k))}" placeholder="${esc(ph)}"></label>`;
+const ta=(k,label)=>`<label class="f"><span>${label}</span><textarea data-k="${k}">${esc(getP(D(),k))}</textarea></label>`;
+const sgn=(k,label,list)=>{const o=getP(D(),k);return `<div class="signrow"><label class="f"><span>${label}</span><input data-k="${k}.name" value="${esc(o.name)}" list="${list}"></label><button class="sigbtn" data-sig="${k}" aria-label="${label} 서명">${o.sig?`<img src="${o.sig}" alt="서명">`:'✍ 서명하기'}</button></div>`};
+const incBox=k=>`<label class="chk" style="font-size:13px;font-weight:400"><input type="checkbox" data-inc="${k}"${D().inc[k]?' checked':''}>PDF 포함</label>`;
+const drop=(kind,label,accept,multi,sub='')=>`<div class="drop" data-dz="${kind}"><span>${label}</span>${sub?`<small>${sub}</small>`:''}<small class="pc">PC: 파일을 여기로 끌어다 놓거나, 복사한 이미지를 Ctrl+V로 붙여넣어도 됩니다</small><input type="file" data-file="${kind}" accept="${accept}"${multi?' multiple':''} aria-label="${label}"></div>`;
+const DL=`<datalist id="dlB">${BUILDER.map(n=>`<option value="${n}">`).join('')}</datalist><datalist id="dlS">${SUPER.map(n=>`<option value="${n}">`).join('')}</datalist>`;
+
+function formReq(){
+  return `<h2>검측요청서 (갑지) ${incBox('req')}</h2>${DL}
+  <div class="row2">${inp('req.no','번호')}${inp('req.date','작성일','date')}</div>
+  ${inp('req.to','수신')}
+  ${inp('req.loc','위치 및 공종')}
+  ${inp('req.part','검측부위')}
+  <div class="row2">${inp('req.reqDate','검측요구일시','date')}${inp('req.items','검측사항')}</div>
+  ${inp('req.attach','붙임')}
+  <div class="row2"><label class="chk"><input type="checkbox" data-k="req.badge"${D().req.badge?' checked':''}>중점품질관리공종 표시</label><label class="chk"><input type="checkbox" data-k="req.re"${D().req.re?' checked':''}>재검측 “(재)” 표시</label></div>
+  <h3>시공사 서명</h3>${sgn('req.staff','시공사 담당직원','dlB')}${sgn('req.agent','현장 대리인','dlB')}
+  <h3>검측결과통보 (감리단 작성)</h3>
+  ${inp('req.rNo','번호')}${inp('req.rTo','수신')}
+  <div class="row2"><label class="f"><span>검측 결과</span><input data-k="req.result" value="${esc(D().req.result)}" list="dlR"><datalist id="dlR"><option value="합격"><option value="불합격"><option value="조건부 합격"></datalist></label>${inp('req.rDate','검측일시','date')}</div>
+  ${inp('req.note','특기사항')}${inp('req.rAttach','붙임')}
+  ${sgn('req.sup1','담당 감리원','dlS')}${sgn('req.sup2','총괄 감리원','dlS')}`;
+}
+const isCustom=k=>!!S.ckCustom?.[k];
+function formChk(){
+  const c=D().chk,def=CK[c.type]||CK.deck,s4=!!def.sign4;
+  const nm=(k,label,list)=>`<label class="f"><span>${label}</span><input data-k="${k}.name" value="${esc(getP(D(),k).name)}" list="${list}"></label>`;
+  const opts=Object.entries(CK).map(([k,v])=>`<option value="${k}"${k===c.type?' selected':''}>${isCustom(k)?'등록 · ':''}${esc(v.name)} (${v.pages.flat().reduce((n,g)=>n+g.it.length,0)}항목)</option>`).join('');
+  return `<h2>체크리스트 ${incBox('chk')}</h2>${DL}
+  <label class="f"><span>체크리스트 종류</span><select data-k="chk.type">${opts}</select></label>
+  <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s" data-ck="edit">${isCustom(c.type)?'이 체크리스트 수정':'복사해서 수정'}</button><button class="btn s" data-ck="new">새로 만들기</button>${isCustom(c.type)?'<button class="btn s" data-ck="del">이 체크리스트 삭제</button>':''}</div>
+  ${drop('ck','+ 체크리스트 등록 (엑셀 / PDF)','.xlsx,.xlsm,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'파일을 읽어 표로 보여드리고, 확인·수정한 뒤 등록합니다')}
+  <p class="hint">엑셀 양식 그대로 출력됩니다. 문서번호·공종·부위·점검일은 검측대장에서 자동으로 들어갑니다.</p>
+  <h3>이름</h3>
+  ${s4?nm('chk.c1','총괄 시공 책임자','dlB'):''}${nm('chk.c2','공종별 시공 관리자 (시공사)','dlB')}
+  ${s4?nm('chk.s1','총괄 감리 책임자 (감리원)','dlS'):''}${nm('chk.s2','건축사보 (공종별 감리책임자)','dlS')}`;
+}
+function formDwg(){
+  const d=D().dwg;
+  return `<h2>시공 위치 도면 ${incBox('dwg')}</h2>
+  <label class="f"><span>공사명 (모든 시트 공통)</span><input data-proj value="${esc(S.project)}"></label>
+  ${inp('dwg.work','공종')}${inp('dwg.sub1','세부공종 1행')}${inp('dwg.sub2','세부공종 2행')}
+  <h3>도면 (1장 = 1쪽)</h3>
+  <p class="hint">불러온 도면은 ‘편집’에서 영역 자르기, 펜, 도형, 구름표시, 글자를 넣을 수 있습니다.</p>
+  ${d.list.map((it,i)=>`<div class="item"><div class="hd"><b>도면 ${i+1}</b><span class="acts"><button class="btn s" data-dw="edit" data-i="${i}">편집</button><button class="btn s" data-dw="up" data-i="${i}" ${i?'':'disabled'}>▲</button><button class="btn s" data-dw="del" data-i="${i}">삭제</button></span></div>
+    <div class="th" style="width:100%;height:140px;background-size:contain;background-image:url(${it.img})"></div></div>`).join('')}
+  ${drop('dwg','+ 도면 불러오기 (이미지 / PDF)','image/*,application/pdf,.pdf',false,'휴대폰: 갤러리·파일·카메라에서 선택')}`;
+}
+const RCOL=[['org','소속',84],['pos','직위',76],['name','성명',72],['birth','생년월일',80],['work','공사한내용',130]];
+function formRos(){
+  const r=D().ros;
+  return `<h2>공사참여자 실명부 ${incBox('ros')}</h2>
+  <div class="row2">${inp('ros.date','작업일','date')}${inp('ros.loc','작업위치')}</div>
+  ${drop('ros','엑셀에서 명단 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'실명부 시트의 소속·직위·성명·생년월일·공사한내용을 자동으로 읽습니다')}
+  <p class="hint">엑셀처럼 칸을 눌러 바로 입력하세요. Enter·↑↓로 칸 이동, 엑셀에서 복사한 여러 칸을 붙여넣기 할 수 있습니다. ${r.rows.length}명 · ${ROS_N}명마다 한 쪽이 늘어납니다.</p>
+  <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button></div>
+  <div class="gwrap"><table class="grid"><colgroup><col style="width:40px">${RCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:84px"></colgroup>
+  <thead><tr><th></th>${RCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th>서명</th></tr></thead>
+  <tbody>${r.rows.map((x,i)=>`<tr class="${i===rSel?'sel':''}"><th data-rsel="${i}">${i+1}</th>${RCOL.map(([f])=>`<td><input data-rk="${i}.${f}" value="${esc(x[f])}" aria-label="${i+1}행 ${f}"${f==='birth'?' inputmode="numeric"':''}></td>`).join('')}<td><button class="gsig" data-rsig="${i}">${x.sig?`<img src="${x.sig}" alt="서명">`:'서명'}</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function formPho(){
+  const ph=D().pho;
+  return `<h2>사진대지 ${incBox('pho')}</h2>
+  <p class="hint">한 쪽에 2장씩 들어갑니다. 휴대폰에서는 ‘사진 추가’를 누르면 카메라 촬영 또는 갤러리 선택이 나옵니다(여러 장 선택 가능). 촬영일은 사진 정보에서 자동으로 채웁니다.</p>
+  ${drop('pho','+ 사진 추가','image/*',true,'휴대폰: 갤러리에서 여러 장 선택 또는 카메라 촬영')}
+  ${ph.map((x,i)=>`<div class="item"><div class="hd"><b>사진 ${i+1} · ${Math.floor(i/2)+1}쪽 ${i%2?'아래':'위'}</b><span class="acts"><button class="btn s" data-ph="up" data-i="${i}" ${i?'':'disabled'}>▲</button><button class="btn s" data-ph="down" data-i="${i}" ${i<ph.length-1?'':'disabled'}>▼</button><button class="btn s" data-ph="del" data-i="${i}">삭제</button></span></div>
+    <div class="ph"><div class="th" style="background-image:url(${x.img||''});cursor:pointer">${x.img?'':'사진<br>선택'}<input type="file" accept="image/*" data-file="phrep:${i}" aria-label="사진 ${i+1} 바꾸기"></div>
+    <div style="display:grid;gap:6px"><div class="row2"><input type="date" data-pk="${i}.date" value="${esc(x.date)}" aria-label="일시"><input data-pk="${i}.loc" value="${esc(x.loc)}" placeholder="위치" aria-label="위치"></div></div></div>
+    <input data-pk="${i}.t1" value="${esc(x.t1)}" placeholder="내용 1행 (예: B1F C동 코어)" aria-label="내용 1행"><input data-pk="${i}.t2" value="${esc(x.t2)}" placeholder="내용 2행 (예: 철근검측)" aria-label="내용 2행"></div>`).join('')}
+  ${ph.length?`<button class="btn" data-ph="blank">+ 빈 칸 추가</button>`:''}`;
+}
+function formOut(){
+  const d=D();let tot=0;
+  const rows=SECS.slice(0,5).map(([k,n])=>{const c=pageCount(k);if(d.inc[k])tot+=c;return `<label class="chk"><input type="checkbox" data-inc="${k}"${d.inc[k]?' checked':''}>${n} <span class="hint">(${c}쪽)</span></label>`}).join('');
+  return `<h2>PDF 출력</h2><p class="hint">이번 검측요청서에 넣을 시트를 고르세요. 순서는 갑지의 붙임 순서대로 정렬됩니다.</p>${rows}
+  <p style="margin:0;font-weight:700">총 ${tot}쪽</p>
+  <label class="f"><span>파일 이름</span><input id="fname" value="${esc((d.req.no||'검측요청서')+'_검측요청서')}"></label>
+  <button class="btn p" id="pdfBtn" ${tot?'':'disabled'}>PDF 저장</button>
+  <p class="hint">PDF는 이 화면에서 바로 만들어집니다. 사진이 많으면 몇 초 걸릴 수 있습니다.</p>`;
+}
+const FORMS={req:formReq,chk:formChk,dwg:formDwg,ros:formRos,pho:formPho,out:formOut};
+function render(){
+  $('#tabs').innerHTML=SECS.map(([k,n])=>`<button data-tab="${k}" class="${k===tab?'on':''}">${n}${k!=='out'?`<span class="n">${D().inc[k]?pageCount(k)+'쪽':'제외'}</span>`:''}</button>`).join('');
+  $('main').classList.toggle('wide',tab==='ros');$('#form').innerHTML=FORMS[tab]();fillLedSel();renderPv();
+}
+const refreshTabs=()=>$$('#tabs button').forEach(b=>{const k=b.dataset.tab,n=b.querySelector('.n');if(n)n.textContent=D().inc[k]?pageCount(k)+'쪽':'제외'});
+
+/* ---------- 이벤트 ---------- */
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;render();window.scrollTo({top:0})});
+$('#catSel').addEventListener('change',async e=>{const v=e.target.value;
+  if(v==='__add'){fillLedSel();const m=$('#cfM');$('#cfT').textContent='공종(대분류) 추가';
+    $('#cfP').innerHTML='<label class="f"><span>공종 이름</span><input id="cNm" placeholder="예: 철골, 조적, 방수"></label><label class="f" style="margin-top:8px"><span>문서번호에 들어갈 약칭</span><input id="cCd" placeholder="예: 철골 → GH62-1-A-철골-001"></label><label class="f" style="margin-top:8px"><span>기본 검측사항 (선택)</span><input id="cIt" placeholder="예: 철골 세우기, 볼트 체결"></label>';
+    m.classList.add('on');$('#cfN').onclick=()=>m.classList.remove('on');
+    $('#cfY').onclick=()=>{const nm=$('#cNm').value.trim(),cd=($('#cCd').value.trim()||nm.slice(0,2)).replace(/[-\s]/g,'');if(!nm||!cd){toast('공종 이름을 입력하세요');return}
+      if(cats().some(c=>c.code===cd)){toast('이미 있는 약칭입니다');return}m.classList.remove('on');cats().push({code:cd,name:nm,items:$('#cIt').value.trim()});S.cat=cd;save();fillLedSel();toast(`‘${nm}’ 공종을 추가했습니다. ‘+ 새 번호’로 첫 요청서를 만드세요`)};return}
+  S.cat=v;kvPut('state',S);fillLedSel();
+  const rows=S.ledger.filter(r=>catOf(r[0])===v);if(!rows.length)toast('이 공종은 아직 번호가 없습니다. ‘+ 새 번호’로 만드세요');
+});
+$('#ledSel').addEventListener('change',e=>{if(e.target.value)applyLedger(e.target.value)});
+const newRequest=async()=>{const no=nextNo();const c=cats().find(x=>x.code===curCat())||cats()[0];S.ledger.push([no,today(),c.name,'','',c.items||'','']);await switchDoc(no,true);save();toast(`${no} 새 검측요청서를 만들었습니다`)};
+$('#newNo').addEventListener('click',newRequest);
+const form=$('#form');
+form.addEventListener('input',e=>{
+  const t=e.target,d=D();
+  if(t.dataset.k){const v=t.type==='checkbox'?t.checked:t.value;setP(d,t.dataset.k,v);
+    if(t.dataset.k==='req.no'||t.dataset.k==='req.part'||t.dataset.k==='req.items'||t.dataset.k==='req.loc'){const r=ledRow(d.led);if(r&&d.led===d.req.no){if(t.dataset.k==='req.items')r[5]=v;if(t.dataset.k==='req.loc')r[2]=v}}
+    if(t.dataset.k==='chk.type'){d.chk.marks={};d.chk.acts={};seedMarks();render();save();return}}
+  else if(t.dataset.proj!==undefined)S.project=t.value;
+  else if(t.dataset.act)d.chk.acts[t.dataset.act]=t.value;
+  else if(t.dataset.rk){const[i,f]=t.dataset.rk.split('.');d.ros.rows[i][f]=t.value}
+  else if(t.dataset.pk){const[i,f]=t.dataset.pk.split('.');d.pho[i][f]=t.value}
+  else if(t.dataset.inc){d.inc[t.dataset.inc]=t.checked;refreshTabs();if(tab==='out'){render()}save();return}
+  else if(t.id==='fname')return;
+  save();schedPv();
+});
+form.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.file){const fs=[...t.files];t.value='';if(fs.length)handleFiles(t.dataset.file,fs)}
+});
+function seedMarks(){const c=D().chk;ckItems(c.type).forEach((it,i)=>{if(it[2]&&!c.marks[i])c.marks[i]=[it[2],'']})}
+form.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;const d=D();
+  if(b.dataset.sig){openSig(getP(d,b.dataset.sig),()=>{save();render()});return}
+  if(b.dataset.rsig){openSig(d.ros.rows[b.dataset.rsig],()=>{save();render()});return}
+  if(b.dataset.mk){const[k,j]=b.dataset.mk.split('.');const m=d.chk.marks[k]||['',''];m[j]=MARKS[(MARKS.indexOf(m[j])+1)%MARKS.length];d.chk.marks[k]=m;b.classList.toggle('v',!!m[j]);b.innerHTML=`<small>${CK[d.chk.type].cols[j]}</small>${esc(m[j])||'&nbsp;'}`;save();schedPv();return}
+  if(b.dataset.fill){const n=ckItems(d.chk.type).length;for(let k=0;k<n;k++){const m=d.chk.marks[k]||['',''];if(b.dataset.fill==='x'){m[0]=m[1]=''}else if(!m[+b.dataset.fill]||m[+b.dataset.fill]==='')m[+b.dataset.fill]='○';d.chk.marks[k]=m}if(b.dataset.fill==='x')seedMarks();save();render();return}
+  const i=+b.dataset.i;
+  if(b.dataset.dw){const L=d.dwg.list;
+    if(b.dataset.dw==='edit')openEditor(L[i]);
+    if(b.dataset.dw==='up'){[L[i-1],L[i]]=[L[i],L[i-1]]}
+    if(b.dataset.dw==='del'){if(!await ask('도면을 삭제할까요?'))return;L.splice(i,1)}
+    if(b.dataset.dw!=='edit'){save();render()}return}
+  if(b.dataset.rs){const R=d.ros.rows,act=b.dataset.rs,j=Math.min(rSel,R.length-1);const blank=()=>({id:uid(),org:'',pos:'',name:'',birth:'',work:'',sig:''});
+    if(act==='add'){R.push(blank());rSel=R.length-1;rFocus=[rSel,'org']}
+    if(act==='ins'){R.splice(Math.max(0,j),0,blank());rSel=Math.max(0,j);rFocus=[rSel,'org']}
+    if(act==='del'){if(j<0||!R.length)return;R.splice(j,1);rSel=Math.min(j,R.length-1)}
+    if(act==='up'){if(j<1)return;[R[j-1],R[j]]=[R[j],R[j-1]];rSel=j-1}
+    if(act==='down'){if(j<0||j>=R.length-1)return;[R[j+1],R[j]]=[R[j],R[j+1]];rSel=j+1}
+    if(act==='fill'){const[fi,ff]=rLast;if(fi==null)return toast('채울 값이 있는 칸을 먼저 누르세요');const v=R[fi]?.[ff];if(!v)return toast('선택한 칸이 비어 있습니다');let n=0;for(let k=fi+1;k<R.length;k++)if(!R[k][ff]){R[k][ff]=v;n++}toast(`${n}칸을 채웠습니다`)}
+    if(act==='trim'){d.ros.rows=R.filter(x=>RCOL.some(([f])=>String(x[f]||'').trim())||x.sig)}
+    if(act==='reset'){if(!await ask('기본 명단으로 바꿀까요?','지금 명단과 서명이 기본 명단(엑셀 양식의 27명)으로 바뀝니다.'))return;d.ros.rows=blankDoc().ros.rows}
+    if(act==='clr'){if(!await ask('실명부 서명을 모두 지울까요?'))return;R.forEach(x=>x.sig='')}
+    save();render();return}
+  if(b.dataset.ph){const P=d.pho;
+    if(b.dataset.ph==='up')[P[i-1],P[i]]=[P[i],P[i-1]];
+    if(b.dataset.ph==='down')[P[i+1],P[i]]=[P[i],P[i+1]];
+    if(b.dataset.ph==='del'){if(P[i].img&&!await ask('사진을 삭제할까요?'))return;P.splice(i,1)}
+    if(b.dataset.ph==='blank')P.push(newPhoto());
+    save();render();return}
+  if(b.dataset.ck){const k=d.chk.type;
+    if(b.dataset.ck==='edit')openCkEd(isCustom(k)?k:null,CK[k],isCustom(k)?CK[k].name:CK[k].name+' (수정본)');
+    if(b.dataset.ck==='new')openCkEd(null,{name:'새 체크리스트',title:'공종별 감리 검측 체크리스트',cols:['시공사','감리단'],sign4:false,pages:[[{a:'기본 업무',b:'',it:[['','']]}]]},'새 체크리스트');
+    if(b.dataset.ck==='del'){if(!await ask(`‘${CK[k].name}’ 체크리스트를 삭제할까요?`))return;delete S.ckCustom[k];delete CK[k];d.chk.type='deck';save();render()}
+    return}
+  if(b.id==='pdfBtn')makePdf();
+});
+let rSel=0,rFocus=null,rLast=[null,null];
+const _render=render;render=function(){_render();if(tab==='ros'&&rFocus){const el=form.querySelector(`[data-rk="${rFocus[0]}.${rFocus[1]}"]`);if(el){el.focus();el.select?.()}rFocus=null}};
+const gFocus=(i,f)=>{const el=form.querySelector(`[data-rk="${i}.${f}"]`);if(el){el.focus();el.select()}return el};
+form.addEventListener('focusin',e=>{const k=e.target.dataset?.rk;if(!k)return;const[i,f]=k.split('.');rLast=[+i,f];if(rSel!==+i){rSel=+i;form.querySelectorAll('.grid tbody tr').forEach((tr,n)=>tr.classList.toggle('sel',n===rSel))}});
+form.addEventListener('keydown',e=>{const k=e.target.dataset?.rk;if(!k||e.isComposing)return;const[i0,f]=k.split('.');const i=+i0;
+  if(e.key==='Enter'||e.key==='ArrowDown'){e.preventDefault();if(!gFocus(i+1,f)&&e.key==='Enter'){D().ros.rows.push({id:uid(),org:'',pos:'',name:'',birth:'',work:'',sig:''});rSel=i+1;rFocus=[i+1,f];save();render()}}
+  else if(e.key==='ArrowUp'){e.preventDefault();gFocus(i-1,f)}
+  else if(e.key==='ArrowRight'&&e.target.selectionStart===e.target.value.length){const c=RCOL.findIndex(x=>x[0]===f);if(RCOL[c+1]){e.preventDefault();gFocus(i,RCOL[c+1][0])}}
+  else if(e.key==='ArrowLeft'&&e.target.selectionEnd===0){const c=RCOL.findIndex(x=>x[0]===f);if(c>0){e.preventDefault();gFocus(i,RCOL[c-1][0])}}
+});
+form.addEventListener('paste',e=>{const k=e.target.dataset?.rk;if(!k)return;const txt=(e.clipboardData||window.clipboardData)?.getData('text')||'';if(!/[\t\n]/.test(txt.replace(/\r?\n$/,'')))return;e.preventDefault();
+  const rows=txt.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(l=>l.split('\t'));const[i0,f]=k.split('.');const c0=RCOL.findIndex(x=>x[0]===f);const R=D().ros.rows;
+  rows.forEach((cells,r)=>{const ri=+i0+r;while(R.length<=ri)R.push({id:uid(),org:'',pos:'',name:'',birth:'',work:'',sig:''});cells.forEach((v,c)=>{const col=RCOL[c0+c];if(col)R[ri][col[0]]=v.trim()})});
+  save();render();toast(`${rows.length}행을 붙여넣었습니다`)});
+form.addEventListener('click',e=>{const t=e.target.closest('[data-rsel]');if(t){rSel=+t.dataset.rsel;form.querySelectorAll('.grid tbody tr').forEach((tr,n)=>tr.classList.toggle('sel',n===rSel))}});
+$('#pdfFab').addEventListener('click',()=>{if(tab!=='out'){tab='out';render();window.scrollTo({top:0})}else makePdf()});
+
+/* ---------- 파일 받기 (선택 / 끌어놓기 / 붙여넣기) ---------- */
+function handleFiles(kind,fs){
+  if(kind==='pho')return addPhotos(fs.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(f.name)));
+  if(kind==='dwg')return loadDrawingFile(fs[0]);
+  if(kind==='ros')return importRoster(fs[0]);
+  if(kind==='ck')return importChecklist(fs[0]);
+  if(kind.startsWith('phrep:'))return replacePhoto(+kind.slice(6),fs[0]);
+}
+form.addEventListener('dragover',e=>{const z=e.target.closest('[data-dz]');if(z){e.preventDefault();z.classList.add('over')}});
+form.addEventListener('dragleave',e=>{const z=e.target.closest('[data-dz]');if(z)z.classList.remove('over')});
+form.addEventListener('drop',e=>{const z=e.target.closest('[data-dz]');if(!z)return;e.preventDefault();z.classList.remove('over');const fs=[...(e.dataTransfer?.files||[])];if(fs.length)handleFiles(z.dataset.dz,fs)});
+addEventListener('dragover',e=>{if(!e.target.closest?.('[data-dz]'))e.preventDefault()});
+addEventListener('drop',e=>{if(e.target.closest?.('[data-dz]'))return;e.preventDefault();const fs=[...(e.dataTransfer?.files||[])];if(!fs.length)return;
+  const kind=tab==='dwg'?'dwg':tab==='pho'?'pho':tab==='ros'?'ros':null;if(kind)handleFiles(kind,fs);else toast('사진대지·시공도면·실명부 탭에서 끌어다 놓아 주세요')});
+document.addEventListener('paste',e=>{if(e.target.closest?.('.grid')||(tab!=='dwg'&&tab!=='pho'))return;const fs=[...(e.clipboardData?.files||[])].filter(f=>/^image\//.test(f.type));if(!fs.length)return;e.preventDefault();handleFiles(tab,fs)});
+
+/* ---------- 엑셀(.xlsx) 읽기 ---------- */
+async function unzip(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf);let e=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-70000);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break}
+  if(e<0)throw new Error('엑셀 파일이 아닙니다');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const out={};const td=new TextDecoder();
+  for(let k=0;k<n;k++){if(dv.getUint32(p,true)!==0x02014b50)break;
+    const m=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lh=dv.getUint32(p+42,true);
+    const name=td.decode(u8.subarray(p+46,p+46+nl));p+=46+nl+el+cl;
+    out[name]=async()=>{const st=lh+30+dv.getUint16(lh+26,true)+dv.getUint16(lh+28,true);const raw=u8.slice(st,st+cs);
+      if(m===0)return td.decode(raw);const ds=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return await new Response(ds).text()}}
+  return out;
+}
+const xml=t=>new DOMParser().parseFromString(t,'application/xml');
+const tags=(n,t)=>[...n.getElementsByTagNameNS('*',t)];
+const colN=s=>[...s].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0);
+async function readWorkbook(file){
+  const z=await unzip(await file.arrayBuffer());if(!z['xl/workbook.xml'])throw new Error('엑셀(.xlsx/.xlsm) 형식이 아닙니다. 구버전 .xls는 엑셀에서 .xlsx로 저장한 뒤 불러와 주세요');
+  const wb=xml(await z['xl/workbook.xml']()),rel=xml(await z['xl/_rels/workbook.xml.rels']());
+  const tgt={};tags(rel,'Relationship').forEach(r=>tgt[r.getAttribute('Id')]=r.getAttribute('Target'));
+  let ss=[];if(z['xl/sharedStrings.xml']){ss=tags(xml(await z['xl/sharedStrings.xml']()),'si').map(si=>tags(si,'t').filter(t=>!t.closest?.('rPh')&&t.parentNode.localName!=='rPh').map(t=>t.textContent).join(''))}
+  const sheets=[];
+  for(const sh of tags(wb,'sheet')){
+    const rid=sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')||sh.getAttribute('r:id');let t=tgt[rid]||'';
+    t=t.startsWith('/')?t.slice(1):'xl/'+t.replace(/^\.\//,'');if(!z[t])continue;
+    sheets.push({name:sh.getAttribute('name'),load:async()=>{const d=xml(await z[t]());const g={};
+      tags(d,'c').forEach(c=>{const r=c.getAttribute('r');if(!r)return;const m=r.match(/^([A-Z]+)(\d+)$/);const ty=c.getAttribute('t');const v=tags(c,'v')[0]?.textContent;
+        let val=ty==='s'?ss[+v]:ty==='inlineStr'?tags(c,'t').map(x=>x.textContent).join(''):v;if(val==null||val==='')return;(g[+m[2]]??={})[colN(m[1])]=String(val).trim()});
+      g.__merges=tags(d,'mergeCell').map(x=>x.getAttribute('ref')).filter(Boolean);return g}});
+  }
+  return sheets;
+}
+const norm=s=>String(s||'').replace(/\s/g,'');
+function rosterFromGrid(g){
+  const people=[];
+  for(const r of Object.keys(g).map(Number).sort((a,b)=>a-b)){
+    if(r!==r||!g[r])continue;for(const[c,v]of Object.entries(g[r])){if(norm(v)!=='성명')continue;const cc=+c;
+      const find=(test)=>{for(let d=-5;d<=5;d++){const h=norm(g[r][cc+d]);if(h&&test(h))return cc+d}return null};
+      const col={org:find(h=>h==='소속'||h.startsWith('소속')||h==='업체명'),pos:find(h=>h.startsWith('직위')||h.startsWith('직종')||h.startsWith('공종')&&h.length<4),name:cc,birth:find(h=>h.startsWith('생년월일')||h.startsWith('주민')),work:find(h=>h.includes('공사한')||h.includes('작업내용')||h.includes('공사내용'))};
+      let org='',blank=0;
+      for(let rr=r+1;rr<r+400&&blank<15;rr++){const row=g[rr]||{};const first=Object.values(row).join('');if(first.startsWith('※'))break;
+        const nm=(row[col.name]||'').replace(/\s+/g,' ').trim();if(col.org!=null&&row[col.org])org=row[col.org];
+        if(!nm||norm(nm)==='성명'){blank++;continue}blank=0;
+        people.push({id:uid(),org:col.org!=null?(row[col.org]||org):'',pos:col.pos!=null?(row[col.pos]||'').replace(/\n/g,''):'',name:nm,birth:col.birth!=null?(row[col.birth]||''):'',work:col.work!=null?(row[col.work]||'').replace(/\n/g,' '):'',sig:''});}
+    }
+  }
+  return people;
+}
+async function importRoster(file){
+  if(!file)return;busy('엑셀 읽는 중…');
+  try{
+    const sheets=await readWorkbook(file);const found=[];
+    const ordered=[...sheets.filter(s=>s.name.includes('실명부')),...sheets.filter(s=>!s.name.includes('실명부'))];
+    for(const sh of ordered){const ppl=rosterFromGrid(await sh.load());if(ppl.length)found.push({name:sh.name,ppl})}
+    busy();
+    if(!found.length){toast('명단을 찾지 못했습니다. ‘성명’ 머리글이 있는 시트가 필요합니다',4500);return}
+    const pick=await choose(found);if(!pick)return;
+    const R=D().ros;R.rows=pick.add?[...R.rows.filter(x=>RCOL.some(([f])=>x[f])),...pick.sheet.ppl]:pick.sheet.ppl;
+    save();render();toast(`‘${pick.sheet.name}’에서 ${pick.sheet.ppl.length}명을 불러왔습니다`);
+  }catch(e){busy();toast(String(e?.message||'엑셀을 읽지 못했습니다'),5000)}
+}
+function choose(found){return new Promise(res=>{const m=$('#cfM');$('#cfT').textContent='불러올 실명부 시트를 고르세요';
+  $('#cfP').innerHTML=`<span style="display:grid;gap:6px;margin-top:6px">${found.map((f,i)=>`<button class="btn" data-pick="${i}" style="text-align:left;white-space:normal">${esc(f.name)} — ${f.ppl.length}명<br><small style="color:var(--mute);font-weight:400">${esc(f.ppl.slice(0,4).map(p=>p.name).join(', '))}${f.ppl.length>4?' …':''}</small></button>`).join('')}</span><label class="chk" style="margin-top:8px"><input type="checkbox" id="pkAdd">지금 명단 뒤에 추가 (끄면 바꾸기)</label>`;
+  $('#cfY').style.display='none';m.classList.add('on');
+  const done=v=>{m.classList.remove('on');$('#cfY').style.display='';$('#cfP').onclick=null;$('#cfN').onclick=null;res(v)};
+  $('#cfP').onclick=e=>{const b=e.target.closest('[data-pick]');if(b)done({sheet:found[+b.dataset.pick],add:$('#pkAdd').checked})};$('#cfN').onclick=()=>done(null)})}
+
+/* ---------- 체크리스트 등록 (엑셀 / PDF → 표 확인·수정 → 등록) ---------- */
+const flatToDef=(meta,rows)=>{
+  const pages=[[]];let cg=null,curA='';
+  for(const r of rows){
+    const t=String(r.t||'').trim();if(!t)continue;
+    if(r.brk&&pages.at(-1).length){pages.push([]);cg=null}
+    const a=String(r.a||'').trim(),b=String(r.b||'').trim();
+    if(a)curA=a;
+    if(!cg||a||b){cg={a:curA,b:b||(a?'':cg?.b||''),it:[]};pages.at(-1).push(cg)}
+    cg.it.push([t,String(r.r||'').trim(),String(r.p1||'').trim(),String(r.p2||'').trim(),String(r.act||'').trim()]);
+  }
+  return {name:meta.name||'체크리스트',title:meta.title||'공종별 감리 검측 체크리스트',cols:[meta.c1||'시공사',meta.c2||'감리단'],sign4:!!meta.sign4,wide:!!meta.wide,custom:true,pages:pages.filter(p=>p.length)};
+};
+const defToFlat=def=>{const rows=[];def.pages.forEach((groups,pi)=>groups.forEach((g,gi)=>g.it.forEach((it,k)=>{const prevA=gi>0?groups[gi-1].a:null;
+  rows.push({brk:pi>0&&gi===0&&k===0,a:k===0&&(gi===0||prevA!==g.a)?g.a:'',b:k===0?g.b:'',t:it[0]||'',r:it[1]||'',p1:it[2]||'',p2:it[3]||'',act:it[4]||''})})));return rows};
+
+/* 엑셀 시트 → 체크리스트(들) */
+function checklistsFromGrid(sheetName,g){
+  const merges={};
+  (g.__merges||[]).forEach(ref=>{const m=ref.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);if(!m)return;const c0=colN(m[1]),r0=+m[2],c1=colN(m[3]),r1=+m[4];
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)(merges[r]??={})[c]=[r0,c0]});
+  const top=(r,c)=>merges[r]?.[c]||[r,c];
+  const val=(r,c)=>{const[a,b]=top(r,c);return g[a]?.[b]||''};
+  const rowsN=Object.keys(g).filter(k=>/^\d+$/.test(k)).map(Number).sort((a,b)=>a-b);if(!rowsN.length)return[];
+  const maxR=rowsN.at(-1);const out=[];let cur=null,col=null,pendTitle='',pendWork='',pendSub='';
+  const rowText=r=>Object.values(g[r]||{}).join(' ');
+  for(let r=rowsN[0];r<=maxR;r++){
+    const row=g[r]||{};const cells=Object.entries(row).map(([c,v])=>[+c,v]);const nt=norm(rowText(r));
+    const hdr=cells.find(([c,v])=>norm(v)==='검사항목');
+    if(!hdr&&nt.includes('체크리스트')&&!cur?.open){pendTitle=String(cells.find(([c,v])=>norm(v).includes('체크리스트'))?.[1]||'').trim();continue}
+    if(!hdr&&!cur?.open){const wi=cells.find(([c,v])=>norm(v)==='공종'),si=cells.find(([c,v])=>norm(v)==='세부공종');
+      if(wi){const nx=cells.filter(([c])=>c>wi[0]).sort((a,b)=>a[0]-b[0])[0];if(nx&&norm(nx[1])!=='세부공종')pendWork=nx[1]}
+      if(si){const nx=cells.filter(([c])=>c>si[0]).sort((a,b)=>a[0]-b[0])[0];if(nx)pendSub=nx[1]}}
+    if(hdr){
+      const find=t=>cells.find(([c,v])=>t(norm(v)))?.[0];
+      const it=hdr[0],gu=find(v=>v==='구분'),ref=find(v=>v.startsWith('기준')),res=find(v=>v.startsWith('검사결과')),act=find(v=>v.startsWith('조치'));
+      const sub=g[r+1]||{};const c1=res!=null?String(sub[res]||'').trim():'',c2=res!=null?String(sub[res+1]||sub[res+2]||'').trim():'';
+      col={it,a:gu??Math.max(1,it-2),b:(gu!=null&&gu+1<it)?gu+1:null,ref,res,res2:res!=null?(sub[res+1]!=null?res+1:res+2):null,act};
+      if(!cur?.open){cur={open:true,name:`${sheetName}${(pendSub||pendWork)&&!/#N\/A|열/.test(pendSub||pendWork)?' · '+(pendSub||pendWork):''}`,title:pendTitle||'공종별 감리 검측 체크리스트',c1:c1||'시공사',c2:c2||'감리단',rows:[],sign4:false,brkNext:false};out.push(cur);pendTitle=pendWork=pendSub=''}
+      else cur.brkNext=true;
+      if(c1||c2)r++;continue;
+    }
+    if(!cur?.open)continue;
+    if(nt.includes('점검일')||nt.startsWith('첨부자료')){
+      if(nt.includes('점검일')){for(let k=r;k<=r+5;k++)if(norm(rowText(k)).includes('총괄'))cur.sign4=true}
+      let k=r;while(k<=maxR&&!norm(rowText(k)).startsWith('첨부자료')&&k<r+8)k++;r=k;cur.open=false;continue;
+    }
+    const t=String(row[col.it]??(top(r,col.it)[0]===r?val(r,col.it):'')).trim();
+    if(!t)continue;
+    const aTop=top(r,col.a),bTop=col.b!=null?top(r,col.b):null;
+    cur.rows.push({brk:cur.brkNext,a:aTop[0]===r?val(r,col.a):'',b:bTop&&bTop[0]===r?val(r,col.b):'',t,r:col.ref!=null?val(r,col.ref):'',p1:col.res!=null?String(row[col.res]||''):'',p2:col.res2!=null?String(row[col.res2]||''):'',act:col.act!=null?val(r,col.act):''});
+    cur.brkNext=false;
+  }
+  return out.filter(x=>x.rows.length).map(x=>({...x,wide:false,rows:x.rows.map(o=>({...o,a:String(o.a).replace(/\n/g,''),b:String(o.b).replace(/\n/g,' ')}))}));
+}
+
+/* PDF → 체크리스트 (글자 위치로 표를 추정) */
+async function checklistFromPdf(file){
+  const lib=await pdfjs();const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const pages=[];let anyText=false;
+  for(let p=1;p<=Math.min(doc.numPages,10);p++){
+    const pg=await doc.getPage(p);const tc=await pg.getTextContent();const items=[];
+    for(const it of tc.items){const s=(it.str||'');if(!s.trim())continue;anyText=true;items.push({x:it.transform[4],y:it.transform[5],w:it.width||s.length*6,h:Math.abs(it.transform[3])||10,s})}
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);const lines=[];
+    for(const it of items){const L=lines.find(l=>Math.abs(l.y-it.y)<=Math.max(2.5,it.h*.3));if(L){L.items.push(it)}else lines.push({y:it.y,items:[it]})}
+    lines.forEach(l=>l.items.sort((a,b)=>a.x-b.x));lines.sort((a,b)=>b.y-a.y);pages.push(lines);
+  }
+  if(!anyText)throw new Error('글자를 읽을 수 없는 PDF입니다(스캔 이미지). 엑셀 파일로 등록하거나 직접 입력해 주세요');
+  const where=(line,word)=>{let str='',xs=[];for(const it of line.items){const ch=[...it.s];ch.forEach((c,i)=>{if(/\s/.test(c))return;str+=c;xs.push(it.x+it.w*(i+.5)/ch.length)})}
+    const i=str.indexOf(word);return i<0?null:{x0:xs[i],x1:xs[i+word.length-1],c:(xs[i]+xs[i+word.length-1])/2}};
+  const J2=arr=>{let o='',pv=null;for(const it of arr.sort((a,b)=>a.x-b.x)){if(pv){const gap=it.x-(pv.x+pv.w);o+=gap>Math.max(1.5,pv.h*.18)?' ':''}o+=it.s;pv=it}return o.replace(/\s+/g,' ').trim()};
+  const JUNK=/무단|복제|Secure|_x000D_|RESTRICTED|정보자산/i;
+  const lineStr=l=>l.items.map(i=>i.s).join(' ').replace(/\s+/g,' ').trim();
+  const meta={name:file.name.replace(/\.pdf$/i,''),title:'',c1:'시공사',c2:'감리단',sign4:false};const rows=[];
+  const REF=/(설계도서|설계도면|시공상세도|표준시방서|구조도면|구조일반사항|구조계산서|자재승인서|현장확인|타설계획서|배합보고서|공장검수|품질관리|시공계획서|실명부\s*확인|기상예보)/;
+  let hdrFound=false;
+  pages.forEach((lines,pi)=>{
+    const hi=lines.findIndex(l=>where(l,'검사항목'));
+    if(hi<0){if(!hdrFound&&pi===0){/* 표 머리글 없음: 줄마다 항목으로 */lines.forEach(l=>{const s=lineStr(l);if(s.length<4||/체크리스트|점검일|첨부/.test(s))return;const m=s.match(REF);rows.push({brk:false,a:'',b:'',t:m?s.replace(m[0],'').trim():s,r:m?m[0]:'',p1:'',p2:'',act:''})})}return}
+    hdrFound=true;const H=lines[hi];
+    if(!meta.title){const tl=lines.slice(0,hi).find(l=>lineStr(l).replace(/\s/g,'').includes('체크리스트'));if(tl)meta.title=lineStr(tl).replace(/문서번호.*$/,'').trim()}
+    const cIt=where(H,'검사항목'),cRef=where(H,'기준'),cRes=where(H,'검사결과'),cAct=where(H,'조치');
+    let start=hi+1;const sub=lines[hi+1];let r1=null,r2=null;
+    if(sub&&cRes){const near=sub.items.filter(i=>Math.abs(i.x+i.w/2-cRes.c)<90);if(near.length>=2){meta.c1=near[0].s.trim();meta.c2=near.at(-1).s.trim();r1=near[0].x+near[0].w/2;r2=near.at(-1).x+near.at(-1).w/2;start=hi+2}}
+    const refC=cRef?cRef.c:null,actC=cAct?cAct.c:null;
+    const bRef=refC!=null?(cIt.c+refC)/2+ (refC-cIt.c)*.15:Infinity;
+    const end=lines.findIndex((l,i)=>i>=start&&/점검일|첨부자료/.test(lineStr(l).replace(/\s/g,'')));
+    const body=lines.slice(start,end<0?lines.length:end);
+    if(end>=0&&lines.slice(end).some(l=>lineStr(l).includes('총괄')))meta.sign4=true;
+    const longX=body.flatMap(l=>l.items).filter(i=>i.x<bRef&&i.s.replace(/\s/g,'').length>=8).map(i=>i.x);
+    const itemLeft=longX.length?Math.min(...longX)-3:cIt.x0-60;
+    const gu=[];let prev=null;const pageRows=[];
+    for(const l of body){if(JUNK.test(lineStr(l)))continue;
+      const parts={g:[],t:[],r:[],p1:[],p2:[],act:[]};
+      for(const it of l.items){const cx=it.x+it.w/2;
+        if(it.x<itemLeft){gu.push({x:it.x,y:l.y,s:it.s.trim()});continue}
+        if(cx<bRef){parts.t.push(it);continue}
+        const cands=[['r',refC],['p1',r1],['p2',r2],['act',actC]].filter(x=>x[1]!=null);
+        const best=cands.sort((a,b)=>Math.abs(cx-a[1])-Math.abs(cx-b[1]))[0];(parts[best?best[0]:'r']).push(it)}
+      const t=J2(parts.t),rr=J2(parts.r);
+      const cont=prev&&t&&!rr&&!parts.p1.length&&!/[?？]$|확인$|검토$|여부$|\)$/.test(prev.t);
+      if(t&&!cont){prev={brk:pi>0&&!pageRows.length&&rows.length>0,a:'',b:'',t,r:rr,p1:J2(parts.p1),p2:J2(parts.p2),act:J2(parts.act),y:l.y};pageRows.push(prev)}
+      else if(prev&&(t||rr)){if(t)prev.t+=' '+t;if(rr)prev.r+=(prev.r?'\n':'')+rr}
+    }
+    if(gu.length&&pageRows.length){
+      const xs=[...new Set(gu.map(g=>Math.round(g.x)))].sort((a,b)=>a-b);let split=null,gap=0;for(let i=1;i<xs.length;i++)if(xs[i]-xs[i-1]>gap){gap=xs[i]-xs[i-1];split=(xs[i]+xs[i-1])/2}
+      if(gap<12)split=-1;
+      for(const key of['a','b']){
+        const fr=gu.filter(g=>split<0?key==='b':key==='a'?g.x<split:g.x>=split).sort((a,b)=>b.y-a.y);const blocks=[];
+        for(const f of fr){const B=blocks.at(-1);if(B&&B.y1-f.y<22){B.s.push(f.s);B.y1=f.y}else blocks.push({y0:f.y,y1:f.y,s:[f.s]})}
+        blocks.forEach(B=>{B.c=(B.y0+B.y1)/2;B.txt=key==='a'?B.s.join(''):B.s.join(' ')});
+        if(!blocks.length)continue;
+        const ys=pageRows.map(r=>r.y);const dif=ys.slice(1).map((y,i)=>ys[i]-y).sort((a,b)=>a-b);const sp=dif.length?dif[Math.floor(dif.length/2)]:16;
+        const topY=ys[0]+sp/2;let start=0;
+        blocks.forEach((B,bi)=>{const dc=topY-B.c;let end=bi===blocks.length-1?1e9:Math.max(start+sp*.6,2*dc-start);
+          const first=pageRows.find(rw=>{const d=topY-rw.y;return d>=start-sp*.25&&d<end-sp*.25});if(first&&!first[key])first[key]=B.txt;start=end});
+      }
+    }
+    rows.push(...pageRows);
+  });
+  if(!rows.length)throw new Error('PDF에서 검사항목을 찾지 못했습니다');
+  return [{...meta,title:meta.title||'공종별 감리 검측 체크리스트',rows:rows.map(({y,...o})=>o)}];
+}
+
+async function importChecklist(file){
+  if(!file)return;busy('파일 읽는 중…');
+  try{
+    let found=[];
+    if(/\.pdf$/i.test(file.name)||file.type==='application/pdf')found=await checklistFromPdf(file);
+    else{const sheets=await readWorkbook(file);
+      const ord=[...sheets.filter(s=>s.name.includes('체크리스트')&&!s.name.includes('대장')),...sheets.filter(s=>!(s.name.includes('체크리스트')&&!s.name.includes('대장')))];
+      for(const sh of ord){try{const L=checklistsFromGrid(sh.name,await sh.load());if(L.length===1)L[0].name=sh.name;found.push(...L)}catch(e){}}}
+    busy();
+    if(!found.length){toast('체크리스트를 찾지 못했습니다. ‘검사항목’ 머리글이 있는 표가 필요합니다',4500);return}
+    let pick=found[0];
+    if(found.length>1){pick=await new Promise(res=>{const m=$('#cfM');$('#cfT').textContent='등록할 체크리스트를 고르세요';
+      $('#cfP').innerHTML=`<span style="display:grid;gap:6px;margin-top:6px">${found.map((f,i)=>`<button class="btn" data-pick="${i}" style="text-align:left;white-space:normal">${esc(f.name)} — ${f.rows.length}항목<br><small style="color:var(--mute);font-weight:400">${esc(f.rows.slice(0,2).map(r=>r.t).join(' / '))}</small></button>`).join('')}</span>`;
+      $('#cfY').style.display='none';m.classList.add('on');
+      const done=v=>{m.classList.remove('on');$('#cfY').style.display='';$('#cfP').onclick=null;$('#cfN').onclick=null;res(v)};
+      $('#cfP').onclick=e=>{const b=e.target.closest('[data-pick]');if(b)done(found[+b.dataset.pick])};$('#cfN').onclick=()=>done(null)})}
+    if(!pick)return;
+    openCkEd(null,null,pick.name,pick,/\.pdf$/i.test(file.name)?'PDF에서 읽은 내용입니다. 구분(묶음)과 줄바꿈이 틀린 곳이 있을 수 있으니 확인 후 등록하세요.':'엑셀에서 읽은 내용입니다. 확인·수정한 뒤 ‘등록’을 누르세요.');
+  }catch(e){busy();toast(String(e?.message||'파일을 읽지 못했습니다'),5000)}
+}
+
+/* 등록·수정 표 */
+const CE={key:null,rows:[],sel:0,wide:false};
+const CECOL=[['a','구분(대)',90],['b','구분(소)',100],['t','검사항목',320],['r','기준·참고사항',130],['p1','결과1 기본값',80],['p2','결과2 기본값',80],['act','조치사항',110]];
+function openCkEd(key,def,name,flat,msg=''){
+  CE.key=key;CE.sel=0;
+  if(flat){CE.rows=flat.rows.map(r=>({...r}));CE.wide=false;$('#ceTitle').value=flat.title;$('#ceC1').value=flat.c1;$('#ceC2').value=flat.c2;$('#ceS4').value=flat.sign4?'1':'0'}
+  else{CE.rows=defToFlat(def);CE.wide=!!def.wide;$('#ceTitle').value=def.title||'공종별 감리 검측 체크리스트';$('#ceC1').value=def.cols?.[0]||'시공사';$('#ceC2').value=def.cols?.[1]||'감리단';$('#ceS4').value=def.sign4?'1':'0'}
+  $('#ceName').value=name||'';$('#ceMsg').textContent=msg;$('#ceSave').textContent=key?'저장':'등록';
+  ceRender();$('#ckEd').classList.add('on');document.body.style.overflow='hidden';
+}
+function ceRender(){
+  $('#ceGrid').innerHTML=`<colgroup><col style="width:40px"><col style="width:40px">${CECOL.map(c=>`<col style="width:${c[2]}px">`).join('')}</colgroup>
+  <thead><tr><th></th><th>쪽</th>${CECOL.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead>
+  <tbody>${CE.rows.map((r,i)=>`<tr class="${i===CE.sel?'sel':''}"><th data-cesel="${i}">${i+1}</th><td class="ck"><input type="checkbox" data-cebrk="${i}"${r.brk?' checked':''} aria-label="${i+1}행부터 새 쪽"></td>${CECOL.map(([f])=>`<td><input data-ce="${i}.${f}" value="${esc(r[f])}" aria-label="${i+1}행 ${f}"></td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+const ceBlank=()=>({brk:false,a:'',b:'',t:'',r:'',p1:'',p2:'',act:''});
+const ceFocus=(i,f)=>{const el=$(`#ceGrid [data-ce="${i}.${f}"]`);if(el){el.focus();el.select()}return el};
+const ceSel=i=>{CE.sel=i;$$('#ceGrid tbody tr').forEach((tr,n)=>tr.classList.toggle('sel',n===i))};
+$('#ckEd').addEventListener('input',e=>{const t=e.target;if(t.dataset.ce&&t.dataset.ce.includes('.')){const[i,f]=t.dataset.ce.split('.');CE.rows[i][f]=t.value}if(t.dataset.cebrk)CE.rows[t.dataset.cebrk].brk=t.checked});
+$('#ckEd').addEventListener('focusin',e=>{const k=e.target.dataset?.ce;if(k&&k.includes('.'))ceSel(+k.split('.')[0])});
+$('#ckEd').addEventListener('keydown',e=>{const k=e.target.dataset?.ce;if(!k||!k.includes('.')||e.isComposing)return;const[i0,f]=k.split('.');const i=+i0;
+  if(e.key==='Enter'||e.key==='ArrowDown'){e.preventDefault();if(!ceFocus(i+1,f)&&e.key==='Enter'){CE.rows.push(ceBlank());ceRender();ceFocus(i+1,f)}}
+  else if(e.key==='ArrowUp'){e.preventDefault();ceFocus(i-1,f)}});
+$('#ckEd').addEventListener('paste',e=>{const k=e.target.dataset?.ce;if(!k||!k.includes('.'))return;const txt=e.clipboardData?.getData('text')||'';if(!/[\t\n]/.test(txt.replace(/\r?\n$/,'')))return;e.preventDefault();
+  const rows=txt.replace(/\r/g,'').replace(/\n$/,'').split('\n').map(l=>l.split('\t'));const[i0,f]=k.split('.');const c0=CECOL.findIndex(x=>x[0]===f);
+  rows.forEach((cells,r)=>{const ri=+i0+r;while(CE.rows.length<=ri)CE.rows.push(ceBlank());cells.forEach((v,c)=>{const col=CECOL[c0+c];if(col)CE.rows[ri][col[0]]=v.trim()})});ceRender();toast(`${rows.length}행을 붙여넣었습니다`)});
+$('#ckEd').addEventListener('click',e=>{const s=e.target.closest('[data-cesel]');if(s)return ceSel(+s.dataset.cesel);
+  const b=e.target.closest('button[data-ce]');if(!b)return;const R=CE.rows,j=Math.min(CE.sel,R.length-1);
+  if(b.dataset.ce==='add'){R.push(ceBlank());CE.sel=R.length-1}
+  if(b.dataset.ce==='ins'){R.splice(Math.max(0,j),0,ceBlank())}
+  if(b.dataset.ce==='del'&&R.length){R.splice(j,1);CE.sel=Math.max(0,Math.min(j,R.length-1))}
+  if(b.dataset.ce==='up'&&j>0){[R[j-1],R[j]]=[R[j],R[j-1]];CE.sel=j-1}
+  if(b.dataset.ce==='down'&&j<R.length-1){[R[j+1],R[j]]=[R[j],R[j+1]];CE.sel=j+1}
+  ceRender();});
+const ceClose=()=>{$('#ckEd').classList.remove('on');document.body.style.overflow=''};
+$('#ceCancel').onclick=ceClose;
+$('#ceSave').onclick=()=>{
+  const def=flatToDef({name:$('#ceName').value.trim(),title:$('#ceTitle').value.trim(),c1:$('#ceC1').value.trim(),c2:$('#ceC2').value.trim(),sign4:$('#ceS4').value==='1',wide:CE.wide},CE.rows);
+  if(!def.pages.length){toast('검사항목을 한 줄 이상 입력하세요');return}
+  const key=CE.key||('u'+uid());S.ckCustom=S.ckCustom||{};S.ckCustom[key]=def;CK[key]=def;D().chk.type=key;
+  ceClose();save();render();toast(`‘${def.name}’ 체크리스트를 ${CE.key?'저장':'등록'}했습니다`);
+};
+
+/* ---------- 앱 받기 / 설치 ---------- */
+let instEv=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display=''});
+try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+const APPFILES=['index.html','manifest.webmanifest','sw.js','icon-192.png','icon-512.png'];
+async function ownFile(n){for(const u of [n,'./'+n]){try{const r=await fetch(u,{cache:'no-store'});if(r.ok)return new Uint8Array(await r.arrayBuffer())}catch(e){}}if(n==='index.html'){try{const r=await fetch('./',{cache:'no-store'});if(r.ok)return new Uint8Array(await r.arrayBuffer())}catch(e){}}return null}
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function makeZip(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
+  for(const f of files){const nm=te.encode(f.name),d=f.data,c=crc32(d);const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);
+    parts.push(h.buffer,nm,d);const ce=new DataView(new ArrayBuffer(46));ce.setUint32(0,0x02014b50,true);ce.setUint16(4,20,true);ce.setUint16(6,20,true);ce.setUint16(8,0x0800,true);ce.setUint32(16,c,true);ce.setUint32(20,d.length,true);ce.setUint32(24,d.length,true);ce.setUint16(28,nm.length,true);ce.setUint32(42,off,true);
+    cen.push(ce.buffer,nm);off+=30+nm.length+d.length}
+  const cs=cen.reduce((a,b)=>a+(b.byteLength??b.length),0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,e.buffer],{type:'application/zip'})}
+$('#appBtn').addEventListener('click',()=>{const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);$('#apIos').style.display=ios&&!isStandalone()?'':'none';$('#apInstall').style.display=instEv?'':'none';$('#appM').classList.add('on')});
+$('#apInstall').addEventListener('click',async()=>{if(!instEv)return;instEv.prompt();const r=await instEv.userChoice.catch(()=>null);instEv=null;$('#apInstall').style.display='none';if(r?.outcome==='accepted')toast('홈 화면에 설치했습니다')});
+$('#apHtml').addEventListener('click',async()=>{busy('준비 중…');const d=await ownFile('index.html');busy();if(!d){toast('이 화면에서는 파일을 가져올 수 없습니다. 원래 링크에서 받아 주세요',4500);return}await saveFile('검측요청서_작성기.html',new Blob([d],{type:'text/html'}))});
+$('#apZip').addEventListener('click',async()=>{busy('묶는 중…');const fs=[];for(const n of APPFILES){const d=await ownFile(n);if(!d){busy();toast('이 화면에서는 설치 파일을 가져올 수 없습니다. 원래 링크에서 받아 주세요',4500);return}fs.push({name:n,data:d})}busy();await saveFile('검측요청서_앱.zip',makeZip(fs))});
+
+/* ---------- 자동 공유 (claude.ai 저장소) ----------
+   app/common : 공사명·검측대장·서명 보관함·등록 체크리스트 (모두 공유)
+   reqs/<번호> : 검측요청서 한 건 (번호마다 따로 저장 → 여러 사람이 다른 번호를 동시에 작성 가능) */
+let DBX=null,ASSETS=null,syncT=null,syncing=false,syncAgain=false,lastCJ='',lastDJ='',commonReady=false,docReady=false,curKey=null,docUnsub=null;const pend={};const clientId=uid()+uid();let USR=null,myId='';
+async function showEditor(id){if(!USR){setSync('☁ 다른 사람이 수정한 내용 반영됨','ok');return}if(!id||id===myId)return;try{const ps=await USR.profiles([id]);const n=ps?.[id]?.name||'다른 사람';setSync(`☁ ${n}님이 수정한 내용 반영됨`,'ok')}catch(e){}}
+const setSync=(t,c='')=>{const e=$('#syncSt');e.textContent=t;e.className='sync '+c};
+function queueSync(now){if(!DBX)return;clearTimeout(syncT);syncT=setTimeout(doSync,now?0:1200)}
+const dataUrlBlob=u=>{const[h,b]=u.split(',');const mime=h.match(/data:([^;]+)/)?.[1]||'image/png';const bin=atob(b);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime})};
+async function externalize(o){if(!ASSETS||!o||typeof o!=='object')return;
+  for(const k of Object.keys(o)){const v=o[k];
+    if(typeof v==='string'&&v.startsWith('data:image')&&v.length>3000){try{const r=await ASSETS.upload(dataUrlBlob(v));if(r?.id&&o[k]===v)o[k]=r.src||('/_blob/'+r.id)}catch(e){}}
+    else if(v&&typeof v==='object')await externalize(v)}}
+const commonPart=()=>({project:S.project,cats:cats(),ledger:S.ledger,sigLib:S.sigLib||{},ckCustom:S.ckCustom||{}});
+async function doSync(){
+  if(!DBX)return;if(syncing){syncAgain=true;return}syncing=true;let warn='';
+  try{await externalize(S);const at=new Date().toISOString();
+    const cj=JSON.stringify(commonPart());
+    if(commonReady&&cj!==lastCJ){setSync('저장 중…');if(cj.length>MAXJ())warn='공통 정보가 너무 큽니다';else{lastCJ=cj;await DBX.doc('app/common').set({by:clientId,uid:myId,at,json:cj})}}
+    const key=curKey;const dj=JSON.stringify(D());
+    if(docReady&&key&&key===curKeyOf()&&dj!==lastDJ){setSync('저장 중…');if(dj.length>MAXJ())warn='이 요청서 내용이 너무 큽니다';else{lastDJ=dj;await DBX.doc('reqs/'+key).set({by:clientId,uid:myId,at,no:D().req.no,json:dj})}}
+    kvPut('state',S);
+    if(warn){setSync('⚠ '+warn,'warn');toast(warn+'. 이 기기에는 저장됩니다',5000)}else if(commonReady&&docReady)setSync('☁ 공유 저장됨','ok');
+  }catch(e){lastCJ=lastDJ='';setSync(e?.code==='invalid_argument'?'보기 전용 · 이 기기에만 저장':'⚠ 공유 저장 실패 · 다시 시도','warn');if(e?.code!=='invalid_argument'&&e?.code!=='quota_exceeded')setTimeout(()=>queueSync(),8000)}
+  syncing=false;if(syncAgain){syncAgain=false;queueSync()}
+}
+const editing=()=>{const a=document.activeElement;return a&&(a.matches?.('input,textarea,select'))&&!a.closest('#menuM,#appM')};
+const busyUI=()=>editing()||$('#ed').classList.contains('on')||$('#ckEd').classList.contains('on')||$('#sigM').classList.contains('on');
+function later(k,fn){if(busyUI()){pend[k]=fn;setSync('다른 사람이 수정함 · 입력 마치면 반영','warn');return}delete pend[k];fn()}
+addEventListener('focusout',()=>setTimeout(()=>{if(!busyUI())Object.keys(pend).forEach(k=>{const f=pend[k];delete pend[k];f()})},400));
+function applyCommon(j){try{const o=JSON.parse(j);Object.assign(S,{project:o.project||S.project,cats:o.cats||S.cats,ledger:o.ledger||S.ledger,sigLib:o.sigLib||{},ckCustom:o.ckCustom||{}});Object.assign(CK,S.ckCustom);lastCJ=j;kvPut('state',S);render();setSync('☁ 공유 저장됨','ok')}catch(e){}}
+function applyDoc(j,key){if(key!==curKey)return;try{const o=JSON.parse(j);const b=blankDoc();for(const k of Object.keys(b))if(o[k]===undefined)o[k]=b[k];S.doc=o;lastDJ=j;kvPut('state',S);kvPut('doc:'+key,o);render();setSync('☁ 공유 저장됨','ok')}catch(e){}}
+function openDoc(key){
+  docUnsub?.();docReady=false;curKey=key;lastDJ='';setSync('요청서 불러오는 중…');
+  docUnsub=DBX.doc('reqs/'+key).onSnapshot(snap=>{
+    if(snap.metadata.hasPendingWrites||key!==curKey)return;const d=snap.exists?snap.data():null;
+    if(!d){if(!snap.metadata.fromCache){docReady=true;queueSync(true)}return}
+    if(!docReady){if(snap.metadata.fromCache){applyDoc(d.json,key);return}docReady=true;applyDoc(d.json,key);return}
+    if(d.json===lastDJ||d.by===clientId)return;
+    later('doc',()=>{applyDoc(d.json,key);showEditor(d.uid)});
+  },e=>{setSync('공유 저장 끊김 · 이 기기에 저장','warn')});
+}
+/* ---------- 팀 공유 서버 (GitHub 웹페이지 + Cloudflare Worker) ---------- */
+const API=String(window.GCR_API||'').replace(/\/+$/,'');let REST=false;
+const MAXJ=()=>REST?1800000:250000;
+const getPass=()=>{try{return localStorage.getItem('gcrPass')||''}catch(e){return ''}};
+let passP=null;
+function askPass(msg){return passP||(passP=new Promise(res=>{const m=$('#cfM');$('#cfT').textContent='팀 비밀번호';
+  $('#cfP').innerHTML=`<span style="display:block;margin-bottom:8px">${esc(msg||'함께 쓰는 검측요청서를 열려면 팀 비밀번호를 입력하세요.')}</span><input type="password" id="pwIn" autocomplete="current-password" style="width:100%">`;
+  m.classList.add('on');setTimeout(()=>$('#pwIn')?.focus(),50);
+  const done=v=>{m.classList.remove('on');$('#cfY').onclick=$('#cfN').onclick=null;passP=null;res(v)};
+  $('#cfY').onclick=()=>{const v=$('#pwIn').value;try{localStorage.setItem('gcrPass',v)}catch(e){}done(!!v)};$('#cfN').onclick=()=>done(false)}))}
+async function restCall(path,opt={},tries=0){
+  let r;try{r=await fetch(API+path,{...opt,cache:'no-store',headers:{...(opt.headers||{}),'x-pass':encodeURIComponent(getPass())}})}catch(e){throw {code:'unavailable'}}
+  if(r.status===401){if(tries<3&&await askPass(tries?'비밀번호가 맞지 않습니다. 다시 입력하세요.':''))return restCall(path,opt,tries+1);throw {code:'invalid_argument'}}
+  if(r.status===413)throw {code:'quota_exceeded'};if(!r.ok)throw {code:'unavailable'};return r.json();
+}
+const snapOf=d=>({exists:!!d,data:()=>d||undefined,metadata:{fromCache:false,hasPendingWrites:false}});
+function restDb(){return{doc:path=>{const q='/api/doc?path='+encodeURIComponent(path);return{
+  get:async()=>{const d=await restCall(q);return snapOf(d.exists?d:null)},
+  set:async body=>{await restCall(q,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)})},
+  onSnapshot:(next,err)=>{let last,stop=false,t;
+    const tick=async()=>{if(stop)return;if(document.hidden){t=setTimeout(tick,5000);return}
+      try{const a=await restCall('/api/at?p='+encodeURIComponent(path));const at=a[path]??null;
+        if(at!==last){last=at;if(at==null)next(snapOf(null));else{const d=await restCall(q);next(snapOf(d.exists?d:null))}}}
+      catch(e){if(e.code==='invalid_argument'){err&&err(e);return}}
+      if(!stop)t=setTimeout(tick,10000)};
+    const vis=()=>{if(!document.hidden&&!stop){clearTimeout(t);tick()}};document.addEventListener('visibilitychange',vis);tick();
+    return()=>{stop=true;clearTimeout(t);document.removeEventListener('visibilitychange',vis)}}}}}}
+const restAssets={upload:async blob=>{let r;try{r=await fetch(API+'/api/img',{method:'POST',headers:{'content-type':blob.type||'image/jpeg','x-pass':encodeURIComponent(getPass())},body:blob})}catch(e){throw {code:'unavailable'}}if(!r.ok)throw {code:'unavailable'};const j=await r.json();return{id:j.id,src:API+'/api/img/'+j.id}}};
+
+async function initSync(){
+  try{
+    if(window.claude?.use){DBX=await window.claude.use('db');try{ASSETS=await window.claude.use('assets')}catch(e){ASSETS=null}}
+    else if(API){setSync('공유 서버 연결 중…');try{await restCall('/api/check')}catch(e){setSync(e?.code==='invalid_argument'?'비밀번호 없음 · 이 기기에만 저장':'공유 서버 연결 안 됨 · 이 기기에 저장','warn');return}
+      DBX=restDb();ASSETS=restAssets;REST=true;$('#mPass').style.display=''}
+    if(!DBX){setSync('이 기기에만 저장');return}
+    if(!REST)try{USR=await window.claude.use('user');myId=(await USR?.id())||'';const w=await USR?.can?.('data.write');if(w===false)toast('보기 권한으로 열었습니다. 수정하려면 소유자에게 ‘참여자(Contributor)’ 이상 권한을 요청하세요',6000)}catch(e){}
+    setSync('공유 저장소 연결 중…');
+    try{const c=await DBX.doc('app/common').get();if(!c.exists){const old=await DBX.doc('app/state').get();if(old.exists){const o=JSON.parse(old.data().json);if(o?.doc){Object.assign(S,{project:o.project||S.project,ledger:o.ledger||S.ledger,sigLib:o.sigLib||{},ckCustom:o.ckCustom||{}});Object.assign(CK,S.ckCustom);S.doc=o.doc;render()}}}
+      else if(S.__fresh){applyCommon(c.data().json)}}catch(e){}
+    const tm=setTimeout(()=>{if(!commonReady)setSync('공유 저장소 연결 안 됨 · 이 기기에 저장','warn')},10000);
+    DBX.doc('app/common').onSnapshot(snap=>{
+      if(snap.metadata.hasPendingWrites)return;const d=snap.exists?snap.data():null;
+      if(!snap.metadata.fromCache){commonReady=true;clearTimeout(tm)}
+      if(!d){if(commonReady)queueSync(true);return}
+      if(d.json===lastCJ)return;if(d.by===clientId&&lastCJ)return;
+      later('common',()=>{applyCommon(d.json);showEditor(d.uid)});
+    },e=>{clearTimeout(tm);setSync('공유 저장 끊김 · 이 기기에 저장','warn')});
+    openDoc(curKeyOf());
+  }catch(e){setSync('이 기기에만 저장')}
+}
+async function inlineBlobs(o){for(const k of Object.keys(o)){const v=o[k];
+  if(typeof v==='string'&&(v.startsWith('/_blob/')||(API&&v.startsWith(API+'/api/img/')))){try{const b=await (await fetch(v)).blob();o[k]=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}catch(e){}}
+  else if(v&&typeof v==='object')await inlineBlobs(v)}}
+
+/* ---------- 확인창 ---------- */
+function ask(t,p=''){return new Promise(res=>{$('#cfT').textContent=t;$('#cfP').textContent=p;const m=$('#cfM');m.classList.add('on');const done=v=>{m.classList.remove('on');$('#cfY').onclick=$('#cfN').onclick=null;res(v)};$('#cfY').onclick=()=>done(true);$('#cfN').onclick=()=>done(false)})}
+$$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.modal').classList.remove('on')));
+
+/* ---------- 파일 메뉴 ---------- */
+$('#menuBtn').addEventListener('click',()=>$('#menuM').classList.add('on'));
+$('#mPass').addEventListener('click',async()=>{$('#menuM').classList.remove('on');const m=$('#cfM');$('#cfT').textContent='팀 비밀번호 변경';$('#cfP').innerHTML='<span style="display:block;margin-bottom:8px">새 비밀번호(4자 이상). 바꾸면 팀원 모두 새 비밀번호로 들어와야 합니다.</span><input type="password" id="pwNew" style="width:100%">';m.classList.add('on');
+  $('#cfN').onclick=()=>{m.classList.remove('on')};$('#cfY').onclick=async()=>{const v=$('#pwNew').value;if(v.length<4){toast('4자 이상 입력하세요');return}m.classList.remove('on');try{await restCall('/api/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:v})});try{localStorage.setItem('gcrPass',v)}catch(e){}toast('팀 비밀번호를 바꿨습니다')}catch(e){toast('비밀번호를 바꾸지 못했습니다')}}});
+$('#mNew').addEventListener('click',()=>{$('#menuM').classList.remove('on');newRequest()});
+$('#mSave').addEventListener('click',async()=>{const name=`${D().req.no||'검측요청서'}_작업파일.json`;busy('작업파일 만드는 중…');const cp=JSON.parse(JSON.stringify(S));await inlineBlobs(cp);busy();await saveFile(name,new Blob([JSON.stringify(cp)],{type:'application/json'}));$('#menuM').classList.remove('on')});
+$('#mLoad').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o.doc)throw 0;S=Object.assign({project:S.project,ledger:S.ledger,sigLib:{}},o);Object.assign(CK,S.ckCustom||{});save();render();toast('작업파일을 불러왔습니다')}catch(_){toast('작업파일 형식이 아닙니다')}e.target.value='';$('#menuM').classList.remove('on')});
+
+/* ---------- 파일 저장 ---------- */
+let dlP=null;
+const getDl=()=>dlP||(dlP=(async()=>{try{return window.claude?.use?await window.claude.use('downloads'):null}catch(e){return null}})());
+async function saveFile(name,blob){
+  const dl=await getDl();
+  if(dl){try{await dl.save({filename:name,data:blob});toast('저장했습니다');return}catch(e){if(e?.code==='declined'){toast('저장을 취소했습니다');return}if(e?.code==='rate_limited'){toast('잠시 후 다시 눌러 주세요');return}}}
+  try{const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('다운로드를 시작했습니다')}catch(e){toast('이 화면에서는 파일 저장이 막혀 있습니다')}
+}
+const pickFile=(accept,cb,multi)=>{const f=$('#fileAny');f.accept=accept;f.multiple=!!multi;f.value='';f.onchange=()=>{if(f.files.length)cb(multi?[...f.files]:f.files[0])};f.click()};
+
+/* ---------- 이미지 처리 ---------- */
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();if(/^https?:/.test(src)&&!src.startsWith(location.origin))i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;i.src=src});
+async function shrink(file,max=1600,q=.85){
+  const u=URL.createObjectURL(file);try{const im=await loadImg(u);const s=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}finally{URL.revokeObjectURL(u)}
+}
+async function exifDate(file){
+  try{const b=new DataView(await file.slice(0,262144).arrayBuffer());if(b.getUint16(0)!==0xFFD8)return'';let o=2;
+    while(o<b.byteLength-4){const m=b.getUint16(o),len=b.getUint16(o+2);if(m===0xFFE1&&b.getUint32(o+4)===0x45786966){const t=o+10,le=b.getUint16(t)===0x4949;const u16=p=>b.getUint16(p,le),u32=p=>b.getUint32(p,le);
+      const ifd=(p,want)=>{const n=u16(p);for(let i=0;i<n;i++){const e=p+2+i*12;if(u16(e)===want)return e}return 0};
+      const rd=e=>{const off=t+u32(e+8);let s='';for(let i=0;i<19;i++)s+=String.fromCharCode(b.getUint8(off+i));return s};
+      const i0=t+u32(t+4);const ex=ifd(i0,0x8769);let e=ex?ifd(t+u32(ex+8),0x9003):0;if(!e)e=ifd(i0,0x0132);if(!e)return'';
+      const s=rd(e);const m2=s.match(/^(\d{4}):(\d{2}):(\d{2})/);return m2?`${m2[1]}-${m2[2]}-${m2[3]}`:''}
+      if((m&0xFF00)!==0xFF00)break;o+=2+len}}catch(e){}return'';
+}
+const newPhoto=()=>{const d=D(),last=d.pho.at(-1);return{id:uid(),img:'',date:last?.date||today(),loc:last?.loc||'현장 내',t1:last?.t1||d.chk.part||'',t2:last?.t2||''}};
+async function photoFrom(f){const p=newPhoto();p.img=await shrink(f);const ed=await exifDate(f);p.date=ed||(f.lastModified?new Date(f.lastModified-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10):p.date);return p}
+async function addPhotos(files){
+  if(!files.length)return;busy(`사진 ${files.length}장 넣는 중…`);
+  try{for(const f of files){D().pho.push(await photoFrom(f))}}catch(e){toast('읽을 수 없는 사진이 있습니다')}
+  busy();save();render();toast(`사진 ${files.length}장을 추가했습니다`);
+}
+async function replacePhoto(i,f){if(!f)return;busy('사진 넣는 중…');try{const p=await photoFrom(f);const o=D().pho[i];o.img=p.img;o.date=p.date}catch(e){toast('사진을 읽을 수 없습니다')}busy();save();render()}
+
+/* ---------- 서명 패드 ---------- */
+const sc=$('#sigCv'),sx=sc.getContext('2d');let sigTarget=null,sigCb=null,sigDirty=false,sigLast=null;
+function openSig(o,cb){sigTarget=o;sigCb=cb;sigDirty=false;sx.clearRect(0,0,sc.width,sc.height);
+  $('#sigT').textContent=(o.name?o.name+' ':'')+'서명';$('#sigLib').style.display=o.name&&S.sigLib[o.name]?'':'none';$('#sigDel').style.display=o.sig?'':'none';
+  $('#sigM').classList.add('on')}
+const sp2=e=>{const r=sc.getBoundingClientRect();return[(e.clientX-r.left)*sc.width/r.width,(e.clientY-r.top)*sc.height/r.height]};
+sc.addEventListener('pointerdown',e=>{sc.setPointerCapture(e.pointerId);sigLast=sp2(e);sigDirty=true;sx.beginPath();sx.arc(sigLast[0],sigLast[1],3.5,0,7);sx.fillStyle='#111';sx.fill()});
+sc.addEventListener('pointermove',e=>{if(!sigLast)return;const p=sp2(e);sx.strokeStyle='#111';sx.lineWidth=Math.max(5,Math.min(9,(e.pressure||.5)*12));sx.lineCap=sx.lineJoin='round';sx.beginPath();sx.moveTo(...sigLast);sx.lineTo(...p);sx.stroke();sigLast=p});
+['pointerup','pointercancel'].forEach(t=>sc.addEventListener(t,()=>sigLast=null));
+$('#sigClr').onclick=()=>{sx.clearRect(0,0,sc.width,sc.height);sigDirty=false};
+$('#sigLib').onclick=()=>{sigTarget.sig=S.sigLib[sigTarget.name];$('#sigM').classList.remove('on');sigCb()};
+$('#sigDel').onclick=()=>{sigTarget.sig='';$('#sigM').classList.remove('on');sigCb()};
+$('#sigOk').onclick=()=>{
+  if(!sigDirty){$('#sigM').classList.remove('on');return}
+  const d=sx.getImageData(0,0,sc.width,sc.height).data;let x0=sc.width,y0=sc.height,x1=0,y1=0;
+  for(let y=0;y<sc.height;y+=2)for(let x=0;x<sc.width;x+=2)if(d[(y*sc.width+x)*4+3]>10){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  const pad=8;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(sc.width,x1+pad);y1=Math.min(sc.height,y1+pad);
+  const c=document.createElement('canvas');const s=Math.min(1,300/(x1-x0));c.width=Math.max(1,(x1-x0)*s);c.height=Math.max(1,(y1-y0)*s);c.getContext('2d').drawImage(sc,x0,y0,x1-x0,y1-y0,0,0,c.width,c.height);
+  sigTarget.sig=c.toDataURL('image/png');if(sigTarget.name)S.sigLib[sigTarget.name]=sigTarget.sig;
+  $('#sigM').classList.remove('on');sigCb();
+};
+
+/* ---------- 도면 불러오기 ---------- */
+const loadScript=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)});
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function pdfjs(){
+  if(!window.pdfjsLib){await loadScript(PDFJS+'pdf.worker.min.js');await loadScript(PDFJS+'pdf.min.js');for(let i=0;i<60&&!(window.pdfjsLib&&window.pdfjsWorker);i++)await sleep(100)}
+  const lib=window.pdfjsLib;if(!lib)throw new Error('PDF 도구를 불러오지 못했습니다');try{lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js'}catch(e){}return lib;
+}
+async function loadDrawingFile(f){
+  try{
+    if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
+      busy('PDF 도면 여는 중…');
+      const lib=await pdfjs();
+      const doc=await lib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+      busy();let pn=1;
+      if(doc.numPages>1)pn=await pickPage(doc.numPages);if(!pn)return;
+      busy('도면 그리는 중…');
+      const pg=await doc.getPage(pn);const v0=pg.getViewport({scale:1});const s=Math.min(4,2600/Math.max(v0.width,v0.height));const v=pg.getViewport({scale:s});
+      const c=document.createElement('canvas');c.width=v.width;c.height=v.height;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+      await pg.render({canvasContext:x,viewport:v}).promise;busy();
+      openEditor({base:c.toDataURL('image/jpeg',.9),shapes:[],img:'',cap:''},true);
+    }else{busy('도면 여는 중…');const b=await shrink(f,2600,.9);busy();openEditor({base:b,shapes:[],img:'',cap:''},true)}
+  }catch(e){busy();toast('도면을 열지 못했습니다'+(String(e).includes('Script')||!window.pdfjsLib?' (PDF 도구를 불러오지 못함)':''))}
+}
+function pickPage(n){return new Promise(res=>{const m=$('#cfM');$('#cfT').textContent=`PDF ${n}쪽 중 몇 쪽을 불러올까요?`;$('#cfP').innerHTML=`<input type="number" id="pgN" min="1" max="${n}" value="1" style="width:100%">`;m.classList.add('on');
+  const done=v=>{m.classList.remove('on');$('#cfY').onclick=$('#cfN').onclick=null;res(v)};$('#cfY').onclick=()=>done(Math.min(n,Math.max(1,+$('#pgN').value||1)));$('#cfN').onclick=()=>done(0)})}
+
+/* ---------- 도면 편집기 ---------- */
+const ec=$('#edCv'),ex=ec.getContext('2d');
+const E={item:null,isNew:false,base:null,baseUrl:'',shapes:[],hist:[],tool:'pen',color:'#e00000',w:4,zoom:1,draft:null,start:null,text:'',pan:null};
+const TOOLS=[['hand','✋ 이동'],['crop','✂ 자르기'],['pen','✏ 펜'],['line','／ 선'],['arrow','➜ 화살표'],['rect','▭ 사각'],['ellipse','◯ 원'],['cloud','☁ 구름'],['text','T 글자'],['erase','⌫ 지우개']];
+const COLORS=['#e00000','#0050e0','#00a050','#ff9900','#111111'];
+function edToolbar(){
+  $('#edTool1').innerHTML=TOOLS.map(([k,n])=>`<button data-t="${k}" class="${E.tool===k?'on':''}">${n}</button>`).join('');
+  $('#edTool2').innerHTML=COLORS.map(c=>`<button class="sw${E.color===c?' on':''}" data-c="${c}" style="background:${c}" aria-label="색상 ${c}"></button>`).join('')+'<span class="sep"></span>'+[2,4,8].map(w=>`<button data-w="${w}" class="${E.w===w?'on':''}">${w===2?'가늘게':w===4?'보통':'굵게'}</button>`).join('')+'<span class="sep"></span><input type="text" id="edTxt" placeholder="넣을 글자" value="'+esc(E.text)+'"><span class="sep"></span><button data-a="undo">↶ 되돌리기</button><button data-a="clear">모두 지우기</button><button data-a="zin">＋</button><button data-a="zout">－</button><button data-a="fit">맞춤</button>';
+  $('#edInfo').textContent={hand:'끌어서 도면을 이동합니다',crop:'남길 영역을 드래그하세요',text:'글자를 입력한 뒤 도면을 누르세요',erase:'지울 표시를 누르세요'}[E.tool]||'도면 위에 그리세요';
+}
+async function openEditor(item,isNew){
+  E.item=item;E.isNew=!!isNew;E.shapes=JSON.parse(JSON.stringify(item.shapes||[]));E.hist=[];E.baseUrl=item.base||item.img;
+  E.base=await loadImg(E.baseUrl);ec.width=E.base.naturalWidth;ec.height=E.base.naturalHeight;E.tool='pen';
+  $('#ed').classList.add('on');document.body.style.overflow='hidden';edToolbar();edFit();edDraw();
+}
+function edFit(){const w=$('#edWrap');const k=Math.min((w.clientWidth-16)/ec.width,(w.clientHeight-16)/ec.height);E.zoom=k;edZoom()}
+function edZoom(){ec.style.width=ec.width*E.zoom+'px';ec.style.height=ec.height*E.zoom+'px'}
+const U=()=>Math.max(ec.width,ec.height)/1000;
+function drawShape(x,s){
+  x.save();x.strokeStyle=x.fillStyle=s.c;x.lineWidth=s.w*U();x.lineCap=x.lineJoin='round';
+  const[a,b]=[s.p[0],s.p[s.p.length-1]];
+  if(s.t==='pen'){x.beginPath();s.p.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.stroke()}
+  else if(s.t==='line'||s.t==='arrow'){x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();if(s.t==='arrow'){const an=Math.atan2(b[1]-a[1],b[0]-a[0]),L=s.w*U()*5;x.beginPath();x.moveTo(b[0],b[1]);x.lineTo(b[0]-L*Math.cos(an-.45),b[1]-L*Math.sin(an-.45));x.lineTo(b[0]-L*Math.cos(an+.45),b[1]-L*Math.sin(an+.45));x.closePath();x.fill()}}
+  else if(s.t==='rect'){x.strokeRect(a[0],a[1],b[0]-a[0],b[1]-a[1])}
+  else if(s.t==='ellipse'){x.beginPath();x.ellipse((a[0]+b[0])/2,(a[1]+b[1])/2,Math.abs(b[0]-a[0])/2,Math.abs(b[1]-a[1])/2,0,0,7);x.stroke()}
+  else if(s.t==='cloud'){const x0=Math.min(a[0],b[0]),y0=Math.min(a[1],b[1]),x1=Math.max(a[0],b[0]),y1=Math.max(a[1],b[1]);const r=Math.max(8,s.w*U()*4);x.beginPath();
+    const edge=(sx0,sy0,ex1,ey1)=>{const len=Math.hypot(ex1-sx0,ey1-sy0),n=Math.max(1,Math.round(len/(r*2))),ang=Math.atan2(ey1-sy0,ex1-sx0);for(let i=0;i<n;i++){const cx=sx0+(ex1-sx0)*(i+.5)/n,cy=sy0+(ey1-sy0)*(i+.5)/n,rr=len/n/2;x.arc(cx,cy,rr,ang+Math.PI,ang+2*Math.PI)}};
+    edge(x0,y0,x1,y0);edge(x1,y0,x1,y1);edge(x1,y1,x0,y1);edge(x0,y1,x0,y0);x.stroke()}
+  else if(s.t==='text'){x.font=`700 ${s.w*U()*7}px 'Noto Sans KR',sans-serif`;x.textBaseline='top';const lw=Math.max(2,s.w*U()*.8);x.lineWidth=lw*3;x.strokeStyle='#fff';x.strokeText(s.s,a[0],a[1]);x.fillText(s.s,a[0],a[1])}
+  else if(s.t==='crop'){x.setLineDash([12*U(),8*U()]);x.strokeStyle='#000';x.lineWidth=3*U();x.strokeRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(0,0,ec.width,Math.min(a[1],b[1]));x.fillRect(0,Math.max(a[1],b[1]),ec.width,ec.height);x.fillRect(0,Math.min(a[1],b[1]),Math.min(a[0],b[0]),Math.abs(b[1]-a[1]));x.fillRect(Math.max(a[0],b[0]),Math.min(a[1],b[1]),ec.width,Math.abs(b[1]-a[1]))}
+  x.restore();
+}
+function edDraw(){ex.drawImage(E.base,0,0);E.shapes.forEach(s=>drawShape(ex,s));if(E.draft)drawShape(ex,E.draft)}
+const ep=e=>{const r=ec.getBoundingClientRect();return[(e.clientX-r.left)*ec.width/r.width,(e.clientY-r.top)*ec.height/r.height]};
+const snap=()=>E.hist.push({shapes:JSON.parse(JSON.stringify(E.shapes)),base:E.baseUrl});
+function hitShape(p){const tol=12*U();for(let i=E.shapes.length-1;i>=0;i--){const s=E.shapes[i];const xs=s.p.map(q=>q[0]),ys=s.p.map(q=>q[1]);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);if(s.t==='text'){x1=x0+s.s.length*s.w*U()*7;y1=y0+s.w*U()*8}if(p[0]>=x0-tol&&p[0]<=x1+tol&&p[1]>=y0-tol&&p[1]<=y1+tol)return i}return -1}
+ec.addEventListener('pointerdown',e=>{
+  ec.setPointerCapture(e.pointerId);const p=ep(e);
+  if(E.tool==='hand'){E.pan=[e.clientX,e.clientY,$('#edWrap').scrollLeft,$('#edWrap').scrollTop];return}
+  if(E.tool==='erase'){const i=hitShape(p);if(i>=0){snap();E.shapes.splice(i,1);edDraw()}return}
+  if(E.tool==='text'){const t=($('#edTxt').value||'').trim();if(!t){toast('위쪽 칸에 넣을 글자를 먼저 입력하세요');$('#edTxt').focus();return}E.text=t;snap();E.shapes.push({t:'text',c:E.color,w:E.w,p:[p],s:t});edDraw();return}
+  E.draft={t:E.tool,c:E.color,w:E.w,p:[p]};
+});
+ec.addEventListener('pointermove',e=>{
+  if(E.pan){const w=$('#edWrap');w.scrollLeft=E.pan[2]-(e.clientX-E.pan[0]);w.scrollTop=E.pan[3]-(e.clientY-E.pan[1]);return}
+  if(!E.draft)return;const p=ep(e);if(E.draft.t==='pen')E.draft.p.push(p);else E.draft.p[1]=p;edDraw();
+});
+const edUp=async()=>{
+  E.pan=null;const d=E.draft;E.draft=null;if(!d){return}
+  if(d.p.length<2){edDraw();return}
+  if(d.t==='crop'){const[a,b]=d.p;const x0=Math.round(Math.min(a[0],b[0])),y0=Math.round(Math.min(a[1],b[1])),w=Math.round(Math.abs(b[0]-a[0])),h=Math.round(Math.abs(b[1]-a[1]));
+    if(w<20||h<20){edDraw();return}
+    snap();const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(E.base,x0,y0,w,h,0,0,w,h);
+    E.baseUrl=c.toDataURL('image/jpeg',.92);E.base=await loadImg(E.baseUrl);E.shapes=E.shapes.map(s=>({...s,p:s.p.map(q=>[q[0]-x0,q[1]-y0])}));
+    ec.width=w;ec.height=h;E.tool='pen';edToolbar();edFit();edDraw();toast('잘라냈습니다. 되돌리기로 원래대로 돌릴 수 있습니다');return}
+  snap();E.shapes.push(d);edDraw();
+};
+ec.addEventListener('pointerup',edUp);ec.addEventListener('pointercancel',()=>{E.draft=null;E.pan=null;edDraw()});
+$('#edTool1').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b){E.tool=b.dataset.t;edToolbar()}});
+$('#edTool2').addEventListener('input',e=>{if(e.target.id==='edTxt')E.text=e.target.value});
+$('#edTool2').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.c)E.color=b.dataset.c;if(b.dataset.w)E.w=+b.dataset.w;
+  const a=b.dataset.a;
+  if(a==='undo'){const h=E.hist.pop();if(h){E.shapes=h.shapes;if(h.base!==E.baseUrl){E.baseUrl=h.base;E.base=await loadImg(h.base);ec.width=E.base.naturalWidth;ec.height=E.base.naturalHeight;edFit()}edDraw()}}
+  if(a==='clear'&&E.shapes.length){snap();E.shapes=[];edDraw()}
+  if(a==='zin'){E.zoom*=1.4;edZoom()}if(a==='zout'){E.zoom/=1.4;edZoom()}if(a==='fit')edFit();
+  if(b.dataset.c||b.dataset.w)edToolbar();
+});
+const edClose=()=>{$('#ed').classList.remove('on');document.body.style.overflow=''};
+$('#edCancel').onclick=edClose;
+$('#edDone').onclick=()=>{
+  E.draft=null;edDraw();
+  const big=Math.max(ec.width,ec.height);const s=Math.min(1,2200/big);const c=document.createElement('canvas');c.width=ec.width*s;c.height=ec.height*s;c.getContext('2d').drawImage(ec,0,0,c.width,c.height);
+  const it=E.item;it.base=E.baseUrl;it.shapes=E.shapes;it.img=c.toDataURL('image/jpeg',.9);
+  if(E.isNew)D().dwg.list.push(it);
+  edClose();save();render();
+};
+addEventListener('resize',()=>{if($('#ed').classList.contains('on'))edFit()});
+
+/* ---------- PDF ---------- */
+const LIBS=['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+async function makePdf(){
+  const keys=['req','chk','dwg','ros','pho'].filter(k=>D().inc[k]);if(!keys.length){toast('출력할 시트를 고르세요');return}
+  busy('PDF 도구 준비 중…');
+  try{for(const s of LIBS)await loadScript(s)}catch(e){busy();toast('PDF 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요',4000);return}
+  try{
+    await document.fonts.ready;
+    const sy=window.scrollY;window.scrollTo(0,0);
+    const st=$('#stage');st.innerHTML=keys.map(k=>PG[k]()).join('');
+    fitCl(st);const pages=[...st.querySelectorAll('.page')];
+    await Promise.all([...st.querySelectorAll('img')].map(i=>i.decode?.().catch(()=>{})));
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+    for(let i=0;i<pages.length;i++){
+      busy(`PDF 만드는 중… ${i+1} / ${pages.length}쪽`);
+      const cv=await window.html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true,scrollX:0,scrollY:0,windowWidth:1100});
+      if(i)pdf.addPage();pdf.addImage(cv.toDataURL('image/jpeg',.9),'JPEG',0,0,210,297,undefined,'FAST');
+    }
+    st.innerHTML='';busy();window.scrollTo(0,sy);
+    const nm=(($('#fname')?.value)||((D().req.no||'검측요청서')+'_검측요청서')).replace(/[\\/:*?"<>|]/g,'_')+'.pdf';
+    await saveFile(nm,pdf.output('blob'));
+  }catch(e){busy();$('#stage').innerHTML='';toast('PDF를 만들지 못했습니다: '+(e?.message||e),5000)}
+}
+
+/* ---------- 시작 ---------- */
+(async()=>{
+  const st=await kvGet('state');
+  if(st&&st.doc){S=Object.assign(S,st);Object.assign(CK,S.ckCustom||{});const b=blankDoc();for(const k of Object.keys(b))if(S.doc[k]===undefined)S.doc[k]=b[k]}
+  else{seedMarks();fillFromLedger('GH62-1-A-철콘-085');S.__fresh=1;kvPut('state',S)}
+  render();initSync();
+})();
+}
+</script>
+</body>
+</html>
