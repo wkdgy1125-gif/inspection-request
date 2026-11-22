@@ -54,7 +54,8 @@ export default {
       if (im && m === 'GET') {
         const r = await db.prepare('SELECT mime, data FROM imgs WHERE id = ?').bind(im[1]).first();
         if (!r) return new Response('not found', { status: 404, headers: CORS });
-        return new Response(r.data, { headers: { 'content-type': r.mime || 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable', ...CORS } });
+        const bytes = r.data instanceof ArrayBuffer ? new Uint8Array(r.data) : ArrayBuffer.isView(r.data) ? r.data : new Uint8Array(r.data || []);
+        return new Response(bytes, { headers: { 'content-type': r.mime || 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable', ...CORS } });
       }
 
       if (!p.startsWith('/api/')) return new Response('Not found', { status: 404, headers: CORS });
