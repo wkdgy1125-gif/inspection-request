@@ -439,7 +439,7 @@ function pgChk(){
     const n=Math.max(1,groups.reduce((s,g)=>s+g.it.length,0));const last=pi===def.pages.length-1,showTitle=!(sp.noRepeat&&pi>0);
     const fixedPt=(showTitle?sp.title+sp.meta*2:0)+sp.ch[0]+sp.ch[1]+(last?footRows.reduce((a,x)=>a+x,0):0);
     let itemPt=Array.isArray(sp.item)?sp.item[Math.min(pi,sp.item.length-1)]:sp.item;
-    if(def.custom)itemPt=Math.max(20,Math.min(48,(AV/1.333-fixedPt)/n));
+    if(!all)itemPt=22;/* 항목이 적어도 행을 늘리지 않고, 남는 자리는 빈 칸으로 채움 */
     const ky=Math.min(1,AV/px(fixedPt+itemPt*n));const h=pt=>(px(pt)*ky).toFixed(1)+'px';
     const fs=(fsx*(ky<.9?Math.sqrt(ky):1)).toFixed(2);
     const head=(showTitle?`<tr style="height:${h(sp.title)}"><td colspan="${all?4:3}" class="ttl" style="font-size:${(sp.tfs*1.333*kx*Math.min(1,Math.sqrt(ky))).toFixed(1)}px">${esc(def.title||'공종별 감리 검측 체크리스트')}</td><th>문서번호</th><td colspan="3" class="c">${esc(D().req.no)}</td></tr>
@@ -450,7 +450,7 @@ function pgChk(){
     groups.forEach((g,gi)=>g.it.forEach((it,k)=>{
       idx++;const ru=runs[gi];
       const ab=g.blank?'<td></td><td></td>':`${ru&&k===0?`<td rowspan="${ru.n}" class="gr">${br(ru.n>4?String(g.a).replace(/\s/g,'').split('').join('\n'):g.a)}</td>`:''}${k===0?`<td rowspan="${g.it.length}" class="gr">${br(String(g.b).replace(/ /g,'\n'))}</td>`:''}`;
-      rows+=`<tr style="height:${h(itemPt)}">${ab}<td class="it" colspan="${all?2:1}">${br(it[0])}</td><td class="c">${br(it[1])}</td><td class="mk">${esc(it[2]||'')}</td><td class="mk">${esc(it[3]||'')}</td><td class="c">${br(it[4]||'')}</td></tr>`;
+      rows+=`<tr class="ir" style="height:${h(itemPt)}">${ab}<td class="it" colspan="${all?2:1}">${br(it[0])}</td><td class="c">${br(it[1])}</td><td class="mk">${esc(it[2]||'')}</td><td class="mk">${esc(it[3]||'')}</td><td class="c">${br(it[4]||'')}</td></tr>`;
     }));
     let foot='';
     if(last){const L=all?3:2,Dc=all?1:1;const fr=footRows.map(h);
@@ -459,7 +459,8 @@ function pgChk(){
       :`<tr style="height:${fr[0]}"><th colspan="${L}">시공자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.cDate)}</td><th class="nw">공종별 시공 관리자</th><td colspan="3" class="c">${sigH(c.c2,1)}</td></tr>
         <tr style="height:${fr[1]}"><th colspan="${L}">감리자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.sDate)}</td><th class="nw">건축사보<br>(공종별 감리책임자)</th><td colspan="3" class="c">${sigH(c.s2,1)}</td></tr>`;
     }
-    return `<div class="page"><div class="cl" style="font-size:${fs}px"><table>${cg}${head}${rows}${foot}</table></div></div>`;
+    const padTr=`<tr class="pad" style="height:${h(itemPt)}"><td></td><td></td><td colspan="${all?2:1}"></td><td></td><td></td><td></td><td></td></tr>`;
+    return `<div class="page"><div class="cl" data-rh="${(px(itemPt)*ky).toFixed(1)}" data-pad='${padTr}' style="font-size:${fs}px"><table>${cg}${head}${rows}${foot}</table></div></div>`;
   });
   return pages.join('');
 }
@@ -509,7 +510,9 @@ function renderPv(){
   pv.innerHTML=keys.map(k=>{const tmp=document.createElement('div');tmp.innerHTML=PG[k]();return [...tmp.children].map(pg=>{total++;return `<div class="pvw" data-sec="${k}">${pg.outerHTML}</div><div class="pvcap">${total}쪽 · ${SECS.find(s=>s[0]===k)[1]}</div>`}).join('')}).join('');
   fitPv();fitCl(pv);
 }
-function fitCl(root){root.querySelectorAll('.cl').forEach(cl=>{cl.style.transform='';const max=1123-66-52,h=cl.offsetHeight;if(h>max){cl.style.transformOrigin='top center';cl.style.transform=`scale(${(max/h).toFixed(4)})`}})}
+function fitCl(root){root.querySelectorAll('.cl').forEach(cl=>{cl.style.transform='';
+  const tb=cl.querySelector('table');tb.querySelectorAll('tr.pad').forEach(r=>r.remove());const rh=parseFloat(cl.dataset.rh||0),last=[...tb.querySelectorAll('tr.ir')].pop();
+  if(rh&&last&&cl.dataset.pad){let g=0;while(cl.offsetHeight+rh<=1123-66-52&&g++<120)last.insertAdjacentHTML('afterend',cl.dataset.pad)}const max=1123-66-52,h=cl.offsetHeight;if(h>max){cl.style.transformOrigin='top center';cl.style.transform=`scale(${(max/h).toFixed(4)})`}})}
 let lastPvW=0;function fitPv(){const pv=$('#pv');const w=Math.floor(Math.min(pv.clientWidth,794));if(Math.abs(w-lastPvW)<2&&pv.style.getPropertyValue('--k'))return;lastPvW=w;pv.style.setProperty('--k',(w/794).toFixed(4))}
 const pvRO=new ResizeObserver(fitPv);pvRO.observe($('#pv'));
 const schedPv=()=>{clearTimeout(pvT);pvT=setTimeout(renderPv,120)};
