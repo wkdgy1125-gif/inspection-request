@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="검측요청서">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -198,7 +198,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 <body>
 <div class="top">
   <div class="bar">
-    <button class="btn s appbtn" id="appBtn" title="앱으로 받기">⬇ 앱 받기</button>
+    <button class="btn s appbtn" id="appBtn" title="앱 설치" style="display:none">📲 앱 설치</button>
     <h1><b>중점품질</b>검측요청서 작성기</h1>
     <div class="docsel">
       <select id="catSel" aria-label="공종(대분류) 선택" class="catsel"></select>
@@ -1035,9 +1035,17 @@ $('#ceSave').onclick=()=>{
 
 /* ---------- 앱 받기 / 설치 ---------- */
 let instEv=null;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display='';$('#appBtn').textContent='📲 앱 설치'});
-addEventListener('appinstalled',()=>{instEv=null;$('#appBtn').textContent='⬇ 앱 받기';toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000)});
-try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display='';$('#appBtn').style.display='';$('#appBtn').textContent='📲 앱 설치'});
+addEventListener('appinstalled',()=>{instEv=null;$('#appBtn').style.display='none';toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000)});
+try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}catch(e){}
+/* 다른 앱에서 공유한 파일 / '연결 프로그램'으로 연 파일 받기 */
+async function takeIncoming(files){const imgs=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)),pdfs=files.filter(f=>/pdf/.test(f.type)||/\.pdf$/i.test(f.name));
+  if(pdfs.length){tab='dwg';render();loadDrawingFile(pdfs[0]);return}
+  if(imgs.length){tab='pho';render();addPhotos(imgs)}}
+async function readShared(){try{if(!/share=1/.test(location.search)||!('caches' in window))return;const c=await caches.open('gcr-share');const keys=await c.keys();const fs=[];
+  for(const k of keys){const r=await c.match(k);const b=await r.blob();fs.push(new File([b],decodeURIComponent(r.headers.get('x-name')||'shared'),{type:b.type||r.headers.get('content-type')||''}))}
+  await caches.delete('gcr-share');history.replaceState(null,'',location.pathname);if(fs.length){toast(`공유받은 파일 ${fs.length}개를 넣습니다`);takeIncoming(fs)}}catch(e){}}
+if('launchQueue' in window){try{launchQueue.setConsumer(async p=>{if(!p.files?.length)return;const fs=[];for(const h of p.files)fs.push(await h.getFile());takeIncoming(fs)})}catch(e){}}
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 const APPFILES=['index.html','manifest.webmanifest','sw.js','icon-192.png','icon-512.png'];
 async function ownFile(n){for(const u of [n,'./'+n]){try{const r=await fetch(u,{cache:'no-store'});if(r.ok)return new Uint8Array(await r.arrayBuffer())}catch(e){}}if(n==='index.html'){try{const r=await fetch('./',{cache:'no-store'});if(r.ok)return new Uint8Array(await r.arrayBuffer())}catch(e){}}return null}
@@ -1051,6 +1059,8 @@ function makeZip(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
   const cs=cen.reduce((a,b)=>a+(b.byteLength??b.length),0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
   return new Blob([...parts,...cen,e.buffer],{type:'application/zip'})}
 const SITE='https://wkdgy1125-gif.github.io/inspection-request/';
+setTimeout(()=>{const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);const away=!!window.claude?.use||location.protocol==='file:';
+  if(!isStandalone()&&!instEv&&(ios||away)){const b=$('#appBtn');b.style.display='';b.textContent=away?'📲 앱 받기':'📲 홈 화면에 추가'}},1500);
 $('#appBtn').addEventListener('click',async()=>{
   if(instEv){instEv.prompt();const r=await instEv.userChoice.catch(()=>null);instEv=null;if(r?.outcome==='accepted'){toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000);return}}
   const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),android=/android/i.test(ua),samsung=/SamsungBrowser/i.test(ua);
@@ -1383,7 +1393,7 @@ async function makePdf(){
   const st=await kvGet('state');
   if(st&&st.doc){S=Object.assign(S,st);Object.assign(CK,S.ckCustom||{});const b=blankDoc();for(const k of Object.keys(b))if(S.doc[k]===undefined)S.doc[k]=b[k]}
   else{seedMarks();fillFromLedger('GH62-1-A-철콘-085');S.__fresh=1;kvPut('state',S)}
-  render();initSync();
+  render();initSync();readShared();
 })();
 }
 </script>
