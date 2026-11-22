@@ -602,7 +602,7 @@ const LCOL=[[0,'문서번호',160],[1,'검측요청일',120],[2,'위치 및 공�
 let lSel=-1;
 function formLed(){
   const cc=curCat(),c=cats().find(x=>x.code===cc);const rows=S.ledger.map((r,i)=>[r,i]).filter(([r])=>catOf(r[0])===cc);
-  return `<h2>검측대장 · ${esc(c?.name||cc)} <span class="hint" style="font-weight:400">${rows.length}건</span></h2>
+  return `<h2 style="justify-content:flex-start;flex-wrap:wrap">검측대장 · <select class="catsel" data-ledcat aria-label="공종 선택" style="width:auto;min-height:40px;font-weight:700;border-color:var(--acc)">${cats().map(x=>`<option value="${esc(x.code)}"${x.code===cc?' selected':''}>${esc(x.name)}</option>`).join('')}<option value="__add">+ 공종 추가…</option></select> <span class="hint" style="font-weight:400">${rows.length}건</span></h2>
   <p class="hint">엑셀처럼 칸을 눌러 바로 고치세요. Enter·↑↓로 이동, 엑셀에서 여러 칸을 복사해 붙여넣을 수 있습니다. 위쪽 공종을 바꾸면 그 공종의 대장이 나옵니다. 고친 내용은 팀 전체에 공유됩니다.</p>
   <div class="gtool"><button class="btn s" data-lg="add">+ 행 추가 (다음 번호)</button><button class="btn s" data-lg="open">선택 행 요청서 열기</button><button class="btn s" data-lg="del">선택 행 삭제</button><button class="btn s" data-lg="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-lg="csv">엑셀로 내보내기 (.csv)</button></div>
   ${drop('led','엑셀 검측대장 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'‘문서번호’ 머리글이 있는 시트를 읽어, 같은 번호는 고치고 새 번호는 추가합니다')}
@@ -641,6 +641,7 @@ form.addEventListener('input',e=>{
   else if(t.dataset.act)d.chk.acts[t.dataset.act]=t.value;
   else if(t.dataset.rk){const[i,f]=t.dataset.rk.split('.');d.ros.rows[i][f]=t.value}
   else if(t.dataset.sz){const[k,i]=t.dataset.sz.split('.');const it=k==='dw'?d.dwg.list[i]:d.pho[i];it.size=+t.value;const l=form.querySelector(`[data-szl="${k}.${i}"]`);if(l)l.textContent=t.value+'%'}
+  else if(t.dataset.ledcat!==undefined){const cs=$('#catSel');cs.value=t.value;cs.dispatchEvent(new Event('change'));if(t.value!=='__add'){lSel=-1;render()}return}
   else if(t.dataset.lk){const[i,f]=t.dataset.lk.split('.').map(Number);const r=S.ledger[i];if(!r)return;const old=r[0];r[f]=t.value;
     if(f===0&&old===d.led){d.led=t.value;d.req.no=t.value}
     if(r[0]===d.led&&f!==0){fillFromLedger(r[0])}save();clearTimeout(fillLedSel.t);fillLedSel.t=setTimeout(fillLedSel,400);return}
