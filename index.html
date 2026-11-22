@@ -193,6 +193,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 #busy{background:#1c1b19}
 @media(max-width:600px){.bar h1{font-size:16px}.row2{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
+.grid .lact{position:sticky;right:0;z-index:2;background:light-dark(#fff,#1f1d1b);white-space:nowrap;text-align:center;box-shadow:-2px 0 4px rgba(0,0,0,.08)}.grid thead th.lact{top:0;z-index:4;background:light-dark(#efece7,#2a2724)}.grid td.lact .gsig{display:inline-flex;width:auto;margin:0 2px;padding:0 10px;border-radius:4px}.gdel{color:#e66!important}.gdel:hover{background:#c00!important;color:#fff!important}
 </style>
 </head>
 <body>
@@ -218,7 +219,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 
 <div class="modal" id="menuM"><div class="mbox">
   <h3>파일</h3>
-  <p class="hint" style="margin:0">버전 2026-11-23 01:19</p>
+  <p class="hint" style="margin:0">버전 2026-11-23 01:25</p>
   <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
   <button class="btn" id="mSave">작업파일 저장 (.json)</button>
   <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
@@ -624,9 +625,9 @@ function formLed(){
   <div class="gtool"><button class="btn s" data-lg="add">+ 행 추가 (다음 번호)</button><button class="btn s" data-lg="open">선택 행 요청서 열기</button><button class="btn s" data-lg="del">선택 행 삭제</button><button class="btn s" data-lg="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-lg="csv">엑셀로 내보내기 (.csv)</button></div>
   ${drop('led','엑셀 검측대장 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'‘문서번호’ 머리글이 있는 시트를 읽어, 같은 번호는 고치고 새 번호는 추가합니다')}
   <button class="btn" data-tpl="ledger">⬇ 검측대장 엑셀 양식 받기</button>
-  <div class="gwrap" style="max-height:72vh"><table class="grid" style="min-width:1100px"><colgroup><col style="width:44px">${LCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:64px"></colgroup>
-  <thead><tr><th></th>${LCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th>열기</th></tr></thead>
-  <tbody>${rows.map(([r,i],n)=>`<tr class="${i===lSel?'sel':''}${r[0]===D().led?' cur':''}"><th data-lsel="${i}">${n+1}</th>${LCOL.map(([f])=>`<td><input data-lk="${i}.${f}" value="${esc(r[f]||'')}"></td>`).join('')}<td><button class="gsig" data-lopen="${i}" title="이 번호의 검측요청서 열기">열기</button></td></tr>`).join('')||`<tr><td colspan="9" class="hint" style="padding:16px;text-align:center">이 공종은 아직 번호가 없습니다. ‘+ 행 추가’를 누르세요.</td></tr>`}</tbody></table></div>`;
+  <div class="gwrap" style="max-height:72vh"><table class="grid" style="min-width:1100px"><colgroup><col style="width:44px">${LCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:104px"></colgroup>
+  <thead><tr><th></th>${LCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th class="lact">열기 · 삭제</th></tr></thead>
+  <tbody>${rows.map(([r,i],n)=>`<tr class="${i===lSel?'sel':''}${r[0]===D().led?' cur':''}"><th data-lsel="${i}">${n+1}</th>${LCOL.map(([f])=>`<td><input data-lk="${i}.${f}" value="${esc(r[f]||'')}"></td>`).join('')}<td class="lact"><button class="gsig" data-lopen="${i}" title="이 번호의 검측요청서 열기">열기</button><button class="gsig gdel" data-ldel="${i}" title="이 행 삭제">✕</button></td></tr>`).join('')||`<tr><td colspan="9" class="hint" style="padding:16px;text-align:center">이 공종은 아직 번호가 없습니다. ‘+ 행 추가’를 누르세요.</td></tr>`}</tbody></table></div>`;
 }
 const FORMS={led:formLed,req:formReq,chk:formChk,dwg:formDwg,ros:formRos,pho:formPho,out:formOut};
 function render(){
@@ -676,6 +677,7 @@ form.addEventListener('change',async e=>{const t=e.target;
 function seedMarks(){const c=D().chk;ckItems(c.type).forEach((it,i)=>{if(it[2]&&!c.marks[i])c.marks[i]=[it[2],'']})}
 form.addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b)return;const d=D();
+  if(b.dataset.ldel){const i=+b.dataset.ldel,r=S.ledger[i];if(!r)return;if(!await ask(`${r[0]||(i+1)+'번'} 행을 대장에서 지울까요?`,'이미 작성한 검측요청서 내용은 지워지지 않습니다.'))return;S.ledger.splice(i,1);lSel=-1;save();render();return}
   if(b.dataset.lopen){const r=S.ledger[+b.dataset.lopen];if(r&&r[0]){tab='req';applyLedger(r[0])}return}
   if(b.dataset.lg){const L=S.ledger,act=b.dataset.lg;
     if(act==='add'){const no=nextNo();const c=cats().find(x=>x.code===curCat())||cats()[0];L.push([no,today(),c.name,'','',c.items||'','']);lSel=L.length-1;save();render();setTimeout(()=>{const el=form.querySelector(`[data-lk="${lSel}.3"]`);el?.focus()},50);return}
