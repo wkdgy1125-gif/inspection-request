@@ -570,6 +570,7 @@ function formRos(){
   return `<h2>공사참여자 실명부 ${incBox('ros')}</h2>
   <div class="row2">${inp('ros.date','작업일','date')}${inp('ros.loc','작업위치')}</div>
   ${drop('ros','엑셀에서 명단 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'실명부 시트의 소속·직위·성명·생년월일·공사한내용을 자동으로 읽습니다')}
+  <button class="btn" data-tpl="roster">⬇ 실명부 엑셀 양식 받기 (빈 양식에 명단을 적어 불러오세요)</button>
   <p class="hint">엑셀처럼 칸을 눌러 바로 입력하세요. Enter·↑↓로 칸 이동, 엑셀에서 복사한 여러 칸을 붙여넣기 할 수 있습니다. ${r.rows.length}명 · ${ROS_N}명마다 한 쪽이 늘어납니다.</p>
   <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button></div>
   <div class="gwrap"><table class="grid"><colgroup><col style="width:40px">${RCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:84px"></colgroup>
@@ -606,6 +607,7 @@ function formLed(){
   <p class="hint">엑셀처럼 칸을 눌러 바로 고치세요. Enter·↑↓로 이동, 엑셀에서 여러 칸을 복사해 붙여넣을 수 있습니다. 위쪽 공종을 바꾸면 그 공종의 대장이 나옵니다. 고친 내용은 팀 전체에 공유됩니다.</p>
   <div class="gtool"><button class="btn s" data-lg="add">+ 행 추가 (다음 번호)</button><button class="btn s" data-lg="open">선택 행 요청서 열기</button><button class="btn s" data-lg="del">선택 행 삭제</button><button class="btn s" data-lg="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-lg="csv">엑셀로 내보내기 (.csv)</button></div>
   ${drop('led','엑셀 검측대장 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'‘문서번호’ 머리글이 있는 시트를 읽어, 같은 번호는 고치고 새 번호는 추가합니다')}
+  <button class="btn" data-tpl="ledger">⬇ 검측대장 엑셀 양식 받기</button>
   <div class="gwrap" style="max-height:72vh"><table class="grid" style="min-width:1100px"><colgroup><col style="width:44px">${LCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:64px"></colgroup>
   <thead><tr><th></th>${LCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th>열기</th></tr></thead>
   <tbody>${rows.map(([r,i],n)=>`<tr class="${i===lSel?'sel':''}${r[0]===D().led?' cur':''}"><th data-lsel="${i}">${n+1}</th>${LCOL.map(([f])=>`<td><input data-lk="${i}.${f}" value="${esc(r[f]||'')}"></td>`).join('')}<td><button class="gsig" data-lopen="${i}" title="이 번호의 검측요청서 열기">열기</button></td></tr>`).join('')||`<tr><td colspan="9" class="hint" style="padding:16px;text-align:center">이 공종은 아직 번호가 없습니다. ‘+ 행 추가’를 누르세요.</td></tr>`}</tbody></table></div>`;
@@ -666,6 +668,9 @@ form.addEventListener('click',async e=>{
     if(act==='csv'){const cc=curCat();const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const lines=[LCOL.map(c=>q(c[1])).join(','),...L.filter(r=>catOf(r[0])===cc).map(r=>LCOL.map(([f])=>q(r[f])).join(','))];await saveFile(`검측대장_${cc}.csv`,new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv'}));return}
     return}
   if(b.dataset.rot){const[k,i,dir]=b.dataset.rot.split('.');const it=k==='dw'?d.dwg.list[+i]:d.pho[+i];busy('돌리는 중…');try{await rotateItem(it,+dir)}catch(e){toast('돌리지 못했습니다')}busy();save();render();return}
+  if(b.dataset.tpl){const f={roster:['roster-template.xlsx','실명부_명단양식.xlsx'],ledger:['ledger-template.xlsx','검측대장_양식.xlsx']}[b.dataset.tpl];
+    try{const r=await fetch(f[0],{cache:'no-store'});if(!r.ok)throw 0;await saveFile(f[1],new Blob([await r.arrayBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}))}
+    catch(e){toast('양식을 받지 못했습니다. 웹 주소에서 다시 시도해 주세요',4000)}return}
   if(b.dataset.paste){pasteFromButton(b.dataset.paste);return}
   if(b.dataset.sig){openSig(getP(d,b.dataset.sig),()=>{save();render()});return}
   if(b.dataset.rsig){openSig(d.ros.rows[b.dataset.rsig],()=>{save();render()});return}
