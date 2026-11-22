@@ -237,14 +237,16 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
   <div class="gwrap" style="max-height:none;flex:1"><table class="grid" id="ceGrid" style="min-width:900px"></table></div>
 </div></div>
 <div class="modal" id="appM"><div class="mbox" style="gap:12px">
-  <h3>앱으로 받기</h3>
-  <button class="btn p" id="apInstall" style="display:none">홈 화면에 앱 설치</button>
-  <p class="hint" id="apIos" style="display:none">아이폰: Safari 아래쪽 공유 버튼 → ‘홈 화면에 추가’를 누르면 앱처럼 설치됩니다.</p>
-  <div id="apDl">
+  <div style="display:flex;gap:12px;align-items:center"><img src="icon-192.png" alt="" width="56" height="56" style="border-radius:12px"><div><h3 style="margin:0">검측요청서 작성기</h3><span class="hint">현장 검측요청서 · PDF 작성</span></div></div>
+  <button class="btn p" id="apInstall" style="display:none;min-height:52px;font-size:17px">설치</button>
+  <p id="apMsg" style="margin:0;font-size:15px;line-height:1.6"></p>
+  <details id="apAdv"><summary class="hint" style="cursor:pointer">파일로 받기 (고급)</summary>
+  <div id="apDl" style="margin-top:8px">
   <button class="btn" id="apHtml" style="width:100%;margin-bottom:8px">HTML 파일 받기<br><small style="font-weight:400;color:var(--mute)">PC·휴대폰에 저장해 두고 브라우저로 열어서 바로 사용</small></button>
   <button class="btn" id="apZip" style="width:100%">앱 설치용 묶음 받기 (.zip)<br><small style="font-weight:400;color:var(--mute)">웹 주소에 올리면 휴대폰 홈 화면에 설치·오프라인 사용 가능</small></button>
   </div>
-  <details><summary class="hint" style="cursor:pointer">설치용 묶음은 이렇게 쓰세요</summary>
+  </details>
+  <details style="display:none"><summary class="hint" style="cursor:pointer">설치용 묶음은 이렇게 쓰세요</summary>
   <ol class="hint" style="padding-left:18px;margin:6px 0 0">
    <li>zip 파일 압축을 풉니다(파일 5개).</li>
    <li>PC 브라우저에서 app.netlify.com/drop 에 들어가 풀린 폴더를 통째로 끌어다 놓습니다(무료). GitHub Pages에 올려도 됩니다.</li>
@@ -953,7 +955,8 @@ $('#ceSave').onclick=()=>{
 
 /* ---------- 앱 받기 / 설치 ---------- */
 let instEv=null;
-addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display=''});
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display='';$('#appBtn').textContent='📲 앱 설치'});
+addEventListener('appinstalled',()=>{instEv=null;$('#appBtn').textContent='⬇ 앱 받기';toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000)});
 try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 const APPFILES=['index.html','manifest.webmanifest','sw.js','icon-192.png','icon-512.png'];
@@ -967,7 +970,20 @@ function makeZip(files){const te=new TextEncoder(),parts=[],cen=[];let off=0;
     cen.push(ce.buffer,nm);off+=30+nm.length+d.length}
   const cs=cen.reduce((a,b)=>a+(b.byteLength??b.length),0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
   return new Blob([...parts,...cen,e.buffer],{type:'application/zip'})}
-$('#appBtn').addEventListener('click',()=>{const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);$('#apIos').style.display=ios&&!isStandalone()?'':'none';$('#apInstall').style.display=instEv?'':'none';$('#appM').classList.add('on')});
+const SITE='https://wkdgy1125-gif.github.io/inspection-request/';
+$('#appBtn').addEventListener('click',async()=>{
+  if(instEv){instEv.prompt();const r=await instEv.userChoice.catch(()=>null);instEv=null;if(r?.outcome==='accepted'){toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000);return}}
+  const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),android=/android/i.test(ua),samsung=/SamsungBrowser/i.test(ua);
+  const inClaude=!!window.claude?.use||!/github\.io$/.test(location.hostname)&&location.protocol!=='file:'&&!/localhost/.test(location.hostname);
+  let m='';
+  if(isStandalone())m='이미 앱으로 실행 중입니다. ✅';
+  else if(location.protocol==='file:'||inClaude)m=`앱 설치는 웹 주소에서 됩니다.<br><a href="${SITE}" target="_blank" rel="noopener" style="color:var(--acc);font-weight:700;word-break:break-all">${SITE}</a><br>이 주소를 휴대폰 Chrome(아이폰은 Safari)으로 열고 ‘앱 받기’를 누르세요.`;
+  else if(ios)m='아이폰은 이렇게 설치합니다.<br>① Safari 아래쪽 <b>공유 버튼(□↑)</b><br>② <b>홈 화면에 추가</b> → 추가';
+  else if(samsung)m='삼성 인터넷: 아래 메뉴(≡) → <b>현재 페이지 추가 → 홈 화면</b><br>또는 Chrome으로 열면 ‘설치’ 버튼이 바로 나옵니다.';
+  else if(android)m='Chrome 오른쪽 위 <b>메뉴(⋮) → 앱 설치</b>(또는 ‘홈 화면에 추가’)를 누르세요.';
+  else m='PC: 주소창 오른쪽의 <b>설치 아이콘(⊕)</b> 또는 Chrome 메뉴(⋮) → <b>캐스트, 저장, 공유 → 앱 설치</b>';
+  $('#apMsg').innerHTML=m;$('#apInstall').style.display=instEv?'':'none';$('#apAdv').style.display=(location.protocol==='file:'||inClaude)?'':'none';
+  $('#appM').classList.add('on')});
 $('#apInstall').addEventListener('click',async()=>{if(!instEv)return;instEv.prompt();const r=await instEv.userChoice.catch(()=>null);instEv=null;$('#apInstall').style.display='none';if(r?.outcome==='accepted')toast('홈 화면에 설치했습니다')});
 $('#apHtml').addEventListener('click',async()=>{busy('준비 중…');const d=await ownFile('index.html');busy();if(!d){toast('이 화면에서는 파일을 가져올 수 없습니다. 원래 링크에서 받아 주세요',4500);return}await saveFile('검측요청서_작성기.html',new Blob([d],{type:'text/html'}))});
 $('#apZip').addEventListener('click',async()=>{busy('묶는 중…');const fs=[];for(const n of APPFILES){const d=await ownFile(n);if(!d){busy();toast('이 화면에서는 설치 파일을 가져올 수 없습니다. 원래 링크에서 받아 주세요',4500);return}fs.push({name:n,data:d})}busy();await saveFile('검측요청서_앱.zip',makeZip(fs))});
