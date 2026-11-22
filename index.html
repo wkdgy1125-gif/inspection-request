@@ -547,6 +547,7 @@ function formChk(){
   <label class="f"><span>체크리스트 종류</span><select data-k="chk.type">${opts}</select></label>
   <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s" data-ck="edit">${isCustom(c.type)?'이 체크리스트 수정':'복사해서 수정'}</button><button class="btn s" data-ck="new">새로 만들기</button>${isCustom(c.type)?'<button class="btn s" data-ck="del">이 체크리스트 삭제</button>':''}</div>
   ${drop('ck','+ 체크리스트 등록 (엑셀 / PDF)','.xlsx,.xlsm,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'파일을 읽어 표로 보여드리고, 확인·수정한 뒤 등록합니다')}
+  <button class="btn" data-tpl="checklist">⬇ 체크리스트 엑셀 등록양식 받기 (작성예시 포함)</button>
   <p class="hint">엑셀 양식 그대로 출력됩니다. 문서번호·공종·부위·점검일은 검측대장에서 자동으로 들어갑니다.</p>
   <h3>이름</h3>
   ${s4?nm('chk.c1','총괄 시공 책임자','dlB'):''}${nm('chk.c2','공종별 시공 관리자 (시공사)','dlB')}
@@ -668,7 +669,7 @@ form.addEventListener('click',async e=>{
     if(act==='csv'){const cc=curCat();const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const lines=[LCOL.map(c=>q(c[1])).join(','),...L.filter(r=>catOf(r[0])===cc).map(r=>LCOL.map(([f])=>q(r[f])).join(','))];await saveFile(`검측대장_${cc}.csv`,new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv'}));return}
     return}
   if(b.dataset.rot){const[k,i,dir]=b.dataset.rot.split('.');const it=k==='dw'?d.dwg.list[+i]:d.pho[+i];busy('돌리는 중…');try{await rotateItem(it,+dir)}catch(e){toast('돌리지 못했습니다')}busy();save();render();return}
-  if(b.dataset.tpl){const f={roster:['roster-template.xlsx','실명부_명단양식.xlsx'],ledger:['ledger-template.xlsx','검측대장_양식.xlsx']}[b.dataset.tpl];
+  if(b.dataset.tpl){const f={roster:['roster-template.xlsx','실명부_명단양식.xlsx'],ledger:['ledger-template.xlsx','검측대장_양식.xlsx'],checklist:['checklist-template.xlsx','체크리스트_등록양식.xlsx']}[b.dataset.tpl];
     try{const r=await fetch(f[0],{cache:'no-store'});if(!r.ok)throw 0;await saveFile(f[1],new Blob([await r.arrayBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}))}
     catch(e){toast('양식을 받지 못했습니다. 웹 주소에서 다시 시도해 주세요',4000)}return}
   if(b.dataset.paste){pasteFromButton(b.dataset.paste);return}
