@@ -1,5 +1,5 @@
 // 검측요청서 작성기 오프라인 캐시
-const VER = 'gcr-v3';
+const VER = 'gcr-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
@@ -42,7 +42,7 @@ self.addEventListener('fetch', e => {
   const u = new URL(req.url);
   if (!(u.origin === location.origin || /cdnjs\.cloudflare\.com|fonts\.(googleapis|gstatic)\.com/.test(u.host))) return;
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => { const cp = res.clone(); caches.open(VER).then(c => c.put('./index.html', cp)); return res; }).catch(() => caches.match('./index.html')));
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { const cp = res.clone(); caches.open(VER).then(c => c.put('./index.html', cp)); return res; }).catch(() => caches.match('./index.html')));
     return;
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => { const cp = res.clone(); caches.open(VER).then(c => c.put(req, cp)); return res; })));

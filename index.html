@@ -218,6 +218,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 
 <div class="modal" id="menuM"><div class="mbox">
   <h3>파일</h3>
+  <p class="hint" style="margin:0">버전 2026-11-23 01:10</p>
   <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
   <button class="btn" id="mSave">작업파일 저장 (.json)</button>
   <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
@@ -1048,7 +1049,7 @@ $('#ceSave').onclick=()=>{
 let instEv=null;
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('#apInstall').style.display='';$('#appBtn').style.display='';$('#appBtn').textContent='📲 앱 설치'});
 addEventListener('appinstalled',()=>{instEv=null;$('#appBtn').style.display='none';toast('설치했습니다. 홈 화면의 ‘검측요청’ 아이콘으로 실행하세요',5000)});
-try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}catch(e){}
+try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude|anthropic/.test(location.hostname))addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));let swReloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(swReloaded)return;swReloaded=true;location.reload()})}catch(e){}
 /* 다른 앱에서 공유한 파일 / '연결 프로그램'으로 연 파일 받기 */
 async function takeIncoming(files){const imgs=files.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)),pdfs=files.filter(f=>/pdf/.test(f.type)||/\.pdf$/i.test(f.name));
   if(pdfs.length){tab='dwg';render();loadDrawingFile(pdfs[0]);return}
