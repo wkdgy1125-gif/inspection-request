@@ -218,10 +218,11 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 
 <div class="modal" id="menuM"><div class="mbox">
   <h3>파일</h3>
-  <p class="hint" style="margin:0">버전 2026-11-23 01:10</p>
+  <p class="hint" style="margin:0">버전 2026-11-23 01:15</p>
   <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
   <button class="btn" id="mSave">작업파일 저장 (.json)</button>
   <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
+  <button class="btn" id="mSig">✍ 개인 서명 등록·관리</button>
   <button class="btn" id="mNew">새 검측요청서 (다음 번호로 만들기)</button>
   <div class="mrow"><button class="btn" data-close>닫기</button></div>
 </div></div>
@@ -262,6 +263,14 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 </div></div>
 <div class="modal" id="cfM"><div class="mbox"><h3 id="cfT"></h3><p class="hint" id="cfP"></p><div class="mrow"><button class="btn" id="cfN">취소</button><button class="btn p" id="cfY">확인</button></div></div></div>
 
+<div class="modal" id="smM"><div class="mbox" style="max-height:90vh;overflow:auto">
+  <h3>개인 서명 등록</h3>
+  <p class="hint" style="margin:0">이름별로 서명을 한 번 등록해 두면, 그 이름의 서명칸을 누를 때 바로 들어갑니다. 등록한 서명은 팀 전체가 함께 씁니다.</p>
+  <div class="signrow" style="grid-template-columns:minmax(0,1fr) auto"><label class="f"><span>이름</span><input id="smName" list="dlAll" placeholder="예: 김장효"></label><button class="btn p" id="smAdd">서명 그리기</button></div>
+  <datalist id="dlAll"></datalist>
+  <div id="smList" style="display:grid;gap:6px"></div>
+  <div class="mrow"><button class="btn" data-close>닫기</button></div>
+</div></div>
 <div class="modal" id="sigM"><div class="mbox">
   <h3 id="sigT">서명</h3>
   <canvas id="sigCv" width="1000" height="400"></canvas>
@@ -521,7 +530,7 @@ const schedPv=()=>{clearTimeout(pvT);pvT=setTimeout(renderPv,120)};
 /* ---------- 폼 ---------- */
 const inp=(k,label,type='text',ph='')=>`<label class="f"><span>${label}</span><input type="${type}" data-k="${k}" value="${esc(getP(D(),k))}" placeholder="${esc(ph)}"></label>`;
 const ta=(k,label)=>`<label class="f"><span>${label}</span><textarea data-k="${k}">${esc(getP(D(),k))}</textarea></label>`;
-const sgn=(k,label,list)=>{const o=getP(D(),k);return `<div class="signrow"><label class="f"><span>${label}</span><input data-k="${k}.name" value="${esc(o.name)}" list="${list}"></label><button class="sigbtn" data-sig="${k}" aria-label="${label} 서명">${o.sig?`<img src="${o.sig}" alt="서명">`:'✍ 서명하기'}</button></div>`};
+const sgn=(k,label,list)=>{const o=getP(D(),k);return `<div class="signrow"><label class="f"><span>${label}</span><input data-k="${k}.name" value="${esc(o.name)}" list="${list}"></label><button class="sigbtn" data-sig="${k}" aria-label="${label} 서명">${o.sig?`<img src="${o.sig}" alt="서명">`:(S.sigLib?.[o.name]?'✍ 등록 서명 넣기':'✍ 서명하기')}</button></div>`};
 const incBox=k=>`<label class="chk" style="font-size:13px;font-weight:400"><input type="checkbox" data-inc="${k}"${D().inc[k]?' checked':''}>PDF 포함</label>`;
 const drop=(kind,label,accept,multi,sub='')=>`<div class="drop" data-dz="${kind}"><span>${label}</span>${sub?`<small>${sub}</small>`:''}<small class="pc">${kind==='pho'||kind==='dwg'?'PC: 파일을 여기로 끌어다 놓거나, 복사(Ctrl+C)한 사진을 Ctrl+V로 붙여넣어도 됩니다':'PC: 파일을 여기로 끌어다 놓아도 됩니다'}</small><input type="file" data-file="${kind}" accept="${accept}"${multi?' multiple':''} aria-label="${label}"></div>`;
 const DL=`<datalist id="dlB">${BUILDER.map(n=>`<option value="${n}">`).join('')}</datalist><datalist id="dlS">${SUPER.map(n=>`<option value="${n}">`).join('')}</datalist>`;
@@ -535,6 +544,7 @@ function formReq(){
   <div class="row2">${inp('req.reqDate','검측요구일시','date')}${inp('req.items','검측사항')}</div>
   ${inp('req.attach','붙임')}
   <div class="row2"><label class="chk"><input type="checkbox" data-k="req.badge"${D().req.badge?' checked':''}>중점품질관리공종 표시</label><label class="chk"><input type="checkbox" data-k="req.re"${D().req.re?' checked':''}>재검측 “(재)” 표시</label></div>
+  <button class="btn" data-smgr>✍ 개인 서명 등록·관리 (한 번 등록하면 서명칸에 바로 들어감)</button>
   <h3>시공사 서명</h3>${sgn('req.staff','시공사 담당직원','dlB')}${sgn('req.agent','현장 대리인','dlB')}
   <h3>검측결과통보 (감리단 작성)</h3>
   ${inp('req.rNo','번호')}${inp('req.rTo','수신')}
@@ -577,10 +587,10 @@ function formRos(){
   ${drop('ros','엑셀에서 명단 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'실명부 시트의 소속·직위·성명·생년월일·공사한내용을 자동으로 읽습니다')}
   <button class="btn" data-tpl="roster">⬇ 실명부 엑셀 양식 받기 (빈 양식에 명단을 적어 불러오세요)</button>
   <p class="hint">엑셀처럼 칸을 눌러 바로 입력하세요. Enter·↑↓로 칸 이동, 엑셀에서 복사한 여러 칸을 붙여넣기 할 수 있습니다. ${r.rows.length}명 · ${ROS_N}명마다 한 쪽이 늘어납니다.</p>
-  <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button></div>
+  <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button><button class="btn s" data-smgr>✍ 개인 서명 등록</button><button class="btn s" data-rs="sigall">등록 서명 일괄 넣기</button></div>
   <div class="gwrap"><table class="grid"><colgroup><col style="width:40px">${RCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:84px"></colgroup>
   <thead><tr><th></th>${RCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th>서명</th></tr></thead>
-  <tbody>${r.rows.map((x,i)=>`<tr class="${i===rSel?'sel':''}"><th data-rsel="${i}">${i+1}</th>${RCOL.map(([f])=>`<td><input data-rk="${i}.${f}" value="${esc(x[f])}" aria-label="${i+1}행 ${f}"${f==='birth'?' inputmode="numeric"':''}></td>`).join('')}<td><button class="gsig" data-rsig="${i}">${x.sig?`<img src="${x.sig}" alt="서명">`:'서명'}</button></td></tr>`).join('')}</tbody></table></div>`;
+  <tbody>${r.rows.map((x,i)=>`<tr class="${i===rSel?'sel':''}"><th data-rsel="${i}">${i+1}</th>${RCOL.map(([f])=>`<td><input data-rk="${i}.${f}" value="${esc(x[f])}" aria-label="${i+1}행 ${f}"${f==='birth'?' inputmode="numeric"':''}></td>`).join('')}<td><button class="gsig" data-rsig="${i}">${x.sig?`<img src="${x.sig}" alt="서명">`:(S.sigLib?.[x.name]?'등록서명':'서명')}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function formPho(){
   const ph=D().pho;
@@ -642,11 +652,12 @@ const form=$('#form');
 form.addEventListener('input',e=>{
   const t=e.target,d=D();
   if(t.dataset.k){const v=t.type==='checkbox'?t.checked:t.value;setP(d,t.dataset.k,v);
+    if(/\.name$/.test(t.dataset.k)){const base=t.dataset.k.slice(0,-5);autoSig(getP(d,base),form.querySelector(`[data-sig="${base}"]`),'✍ 서명하기')}
     if(t.dataset.k==='req.no'||t.dataset.k==='req.part'||t.dataset.k==='req.items'||t.dataset.k==='req.loc'){const r=ledRow(d.led);if(r&&d.led===d.req.no){if(t.dataset.k==='req.items')r[5]=v;if(t.dataset.k==='req.loc')r[2]=v}}
     if(t.dataset.k==='chk.type'){d.chk.marks={};d.chk.acts={};seedMarks();render();save();return}}
   else if(t.dataset.proj!==undefined)S.project=t.value;
   else if(t.dataset.act)d.chk.acts[t.dataset.act]=t.value;
-  else if(t.dataset.rk){const[i,f]=t.dataset.rk.split('.');d.ros.rows[i][f]=t.value}
+  else if(t.dataset.rk){const[i,f]=t.dataset.rk.split('.');d.ros.rows[i][f]=t.value;if(f==='name')autoSig(d.ros.rows[i],form.querySelector(`[data-rsig="${i}"]`),'서명')}
   else if(t.dataset.sz){const[k,i]=t.dataset.sz.split('.');const it=k==='dw'?d.dwg.list[i]:d.pho[i];it.size=+t.value;const l=form.querySelector(`[data-szl="${k}.${i}"]`);if(l)l.textContent=t.value+'%'}
   else if(t.dataset.ledcat!==undefined){const cs=$('#catSel');cs.value=t.value;cs.dispatchEvent(new Event('change'));if(t.value!=='__add'){lSel=-1;render()}return}
   else if(t.dataset.lk){const[i,f]=t.dataset.lk.split('.').map(Number);const r=S.ledger[i];if(!r)return;const old=r[0];r[f]=t.value;
@@ -677,8 +688,10 @@ form.addEventListener('click',async e=>{
     try{const r=await fetch(f[0],{cache:'no-store'});if(!r.ok)throw 0;await saveFile(f[1],new Blob([await r.arrayBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}))}
     catch(e){toast('양식을 받지 못했습니다. 웹 주소에서 다시 시도해 주세요',4000)}return}
   if(b.dataset.paste){pasteFromButton(b.dataset.paste);return}
-  if(b.dataset.sig){openSig(getP(d,b.dataset.sig),()=>{save();render()});return}
-  if(b.dataset.rsig){openSig(d.ros.rows[b.dataset.rsig],()=>{save();render()});return}
+  if(b.dataset.sig||b.dataset.rsig){const o=b.dataset.sig?getP(d,b.dataset.sig):d.ros.rows[b.dataset.rsig];const lib=S.sigLib?.[String(o.name||'').trim()];
+    if(!o.sig&&lib){o.sig=lib;save();render();toast(`${o.name}님 등록 서명을 넣었습니다 (다시 누르면 새로 그리기·삭제)`,3500);return}
+    openSig(o,()=>{save();render()});return}
+  if(b.dataset.smgr!==undefined){openSigMgr();return}
   if(b.dataset.mk){const[k,j]=b.dataset.mk.split('.');const m=d.chk.marks[k]||['',''];m[j]=MARKS[(MARKS.indexOf(m[j])+1)%MARKS.length];d.chk.marks[k]=m;b.classList.toggle('v',!!m[j]);b.innerHTML=`<small>${CK[d.chk.type].cols[j]}</small>${esc(m[j])||'&nbsp;'}`;save();schedPv();return}
   if(b.dataset.fill){const n=ckItems(d.chk.type).length;for(let k=0;k<n;k++){const m=d.chk.marks[k]||['',''];if(b.dataset.fill==='x'){m[0]=m[1]=''}else if(!m[+b.dataset.fill]||m[+b.dataset.fill]==='')m[+b.dataset.fill]='○';d.chk.marks[k]=m}if(b.dataset.fill==='x')seedMarks();save();render();return}
   const i=+b.dataset.i;
@@ -697,6 +710,7 @@ form.addEventListener('click',async e=>{
     if(act==='trim'){d.ros.rows=R.filter(x=>RCOL.some(([f])=>String(x[f]||'').trim())||x.sig)}
     if(act==='reset'){if(!await ask('기본 명단으로 바꿀까요?','지금 명단과 서명이 기본 명단(엑셀 양식의 27명)으로 바뀝니다.'))return;d.ros.rows=blankDoc().ros.rows}
     if(act==='clr'){if(!await ask('실명부 서명을 모두 지울까요?'))return;R.forEach(x=>x.sig='')}
+    if(act==='sigall'){let n=0;R.forEach(x=>{const l=S.sigLib?.[String(x.name||'').trim()];if(l&&!x.sig){x.sig=l;n++}});toast(n?`${n}명에게 등록 서명을 넣었습니다`:'넣을 등록 서명이 없습니다')}
     save();render();return}
   if(b.dataset.ph){const P=d.pho;
     if(b.dataset.ph==='up')[P[i-1],P[i]]=[P[i],P[i-1]];
@@ -1250,6 +1264,20 @@ async function addPhotos(files){
 }
 async function replacePhoto(i,f){if(!f)return;busy('사진 넣는 중…');try{const p=await photoFrom(f);const o=D().pho[i];o.img=p.img;o.date=p.date}catch(e){toast('사진을 읽을 수 없습니다')}busy();save();render()}
 
+/* 이름을 고르면 그 사람의 등록 서명이 자동으로 들어감 (다른 사람 등록 서명이 있던 자리는 바꿔 줌) */
+function autoSig(o,btn,empty){if(!o)return;const L=S.sigLib||{};const lib=L[String(o.name||'').trim()];const wasLib=!o.sig||Object.values(L).includes(o.sig);
+  if(lib&&wasLib)o.sig=lib;else if(!lib&&o.sig&&Object.values(L).includes(o.sig))o.sig='';
+  if(btn)btn.innerHTML=o.sig?`<img src="${o.sig}" alt="서명">`:empty}
+/* ---------- 개인 서명 등록 ---------- */
+function renderSm(){const L=S.sigLib||{};const names=Object.keys(L).sort((a,b)=>a.localeCompare(b,'ko'));
+  $('#smList').innerHTML=names.length?names.map(n=>`<div class="item" style="display:flex;align-items:center;gap:8px;padding:6px 10px"><b style="min-width:64px">${esc(n)}</b><span style="background:#fff;border-radius:4px;padding:2px 6px;display:flex"><img src="${L[n]}" alt="" style="height:34px;max-width:140px"></span><span style="flex:1"></span><button class="btn s" data-smre="${esc(n)}">다시 등록</button><button class="btn s" data-smdel="${esc(n)}">삭제</button></div>`).join(''):'<p class="hint">아직 등록된 서명이 없습니다.</p>';
+  const all=new Set([...BUILDER,...SUPER,...(D().ros.rows||[]).map(r=>r.name),...names].map(x=>String(x||'').trim()).filter(Boolean));$('#dlAll').innerHTML=[...all].map(n=>`<option value="${esc(n)}">`).join('')}
+function openSigMgr(){$('#menuM').classList.remove('on');renderSm();$('#smM').classList.add('on')}
+const smDraw=n=>{n=String(n||'').trim();if(!n){toast('이름을 먼저 입력하세요');$('#smName').focus();return}const o={name:n,sig:''};openSig(o,()=>{if(o.sig){S.sigLib=S.sigLib||{};S.sigLib[n]=o.sig;save();renderSm();render();toast(`${n}님 서명을 등록했습니다`)}})};
+$('#smAdd').onclick=()=>smDraw($('#smName').value);
+$('#smList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.smre)smDraw(b.dataset.smre);
+  if(b.dataset.smdel){const n=b.dataset.smdel;if(!await ask(`${n}님 등록 서명을 지울까요?`,'이미 문서에 넣은 서명은 그대로 남습니다.'))return;delete S.sigLib[n];save();renderSm();render()}});
+$('#mSig').onclick=openSigMgr;
 /* ---------- 서명 패드 ---------- */
 const sc=$('#sigCv'),sx=sc.getContext('2d');let sigTarget=null,sigCb=null,sigDirty=false,sigLast=null;
 function openSig(o,cb){sigTarget=o;sigCb=cb;sigDirty=false;sx.clearRect(0,0,sc.width,sc.height);
