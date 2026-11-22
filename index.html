@@ -217,7 +217,6 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
   <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
   <button class="btn" id="mSave">작업파일 저장 (.json)</button>
   <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
-  <button class="btn" id="mPass" style="display:none">팀 비밀번호 변경</button>
   <button class="btn" id="mNew">새 검측요청서 (다음 번호로 만들기)</button>
   <div class="mrow"><button class="btn" data-close>닫기</button></div>
 </div></div>
@@ -1062,7 +1061,7 @@ async function initSync(){
   try{
     if(window.claude?.use){DBX=await window.claude.use('db');try{ASSETS=await window.claude.use('assets')}catch(e){ASSETS=null}}
     else if(API){setSync('공유 서버 연결 중…');try{await restCall('/api/check')}catch(e){setSync(e?.code==='invalid_argument'?'비밀번호 없음 · 이 기기에만 저장':'공유 서버 연결 안 됨 · 이 기기에 저장','warn');return}
-      DBX=restDb();ASSETS=restAssets;REST=true;$('#mPass').style.display=''}
+      DBX=restDb();ASSETS=restAssets;REST=true}
     if(!DBX){setSync('이 기기에만 저장');return}
     if(!REST)try{USR=await window.claude.use('user');myId=(await USR?.id())||'';const w=await USR?.can?.('data.write');if(w===false)toast('보기 권한으로 열었습니다. 수정하려면 소유자에게 ‘참여자(Contributor)’ 이상 권한을 요청하세요',6000)}catch(e){}
     setSync('공유 저장소 연결 중…');
@@ -1089,8 +1088,6 @@ $$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.modal')
 
 /* ---------- 파일 메뉴 ---------- */
 $('#menuBtn').addEventListener('click',()=>$('#menuM').classList.add('on'));
-$('#mPass').addEventListener('click',async()=>{$('#menuM').classList.remove('on');const m=$('#cfM');$('#cfT').textContent='팀 비밀번호 변경';$('#cfP').innerHTML='<span style="display:block;margin-bottom:8px">새 비밀번호(4자 이상). 바꾸면 팀원 모두 새 비밀번호로 들어와야 합니다.</span><input type="password" id="pwNew" style="width:100%">';m.classList.add('on');
-  $('#cfN').onclick=()=>{m.classList.remove('on')};$('#cfY').onclick=async()=>{const v=$('#pwNew').value;if(v.length<4){toast('4자 이상 입력하세요');return}m.classList.remove('on');try{await restCall('/api/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:v})});try{localStorage.setItem('gcrPass',v)}catch(e){}toast('팀 비밀번호를 바꿨습니다')}catch(e){toast('비밀번호를 바꾸지 못했습니다')}}});
 $('#mNew').addEventListener('click',()=>{$('#menuM').classList.remove('on');newRequest()});
 $('#mSave').addEventListener('click',async()=>{const name=`${D().req.no||'검측요청서'}_작업파일.json`;busy('작업파일 만드는 중…');const cp=JSON.parse(JSON.stringify(S));await inlineBlobs(cp);busy();await saveFile(name,new Blob([JSON.stringify(cp)],{type:'application/json'}));$('#menuM').classList.remove('on')});
 $('#mLoad').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o.doc)throw 0;S=Object.assign({project:S.project,ledger:S.ledger,sigLib:{}},o);Object.assign(CK,S.ckCustom||{});save();render();toast('작업파일을 불러왔습니다')}catch(_){toast('작업파일 형식이 아닙니다')}e.target.value='';$('#menuM').classList.remove('on')});

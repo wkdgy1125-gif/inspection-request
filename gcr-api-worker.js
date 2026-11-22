@@ -7,7 +7,7 @@
 //  3) gcr-api → Settings → Bindings → Add → D1 database
 //     → Variable name: DB  /  Database: inspection-request → Save
 //  표는 첫 접속 때 자동으로 만들어집니다.
-//  팀 비밀번호 기본값: 1234  (앱의 '파일 → 팀 비밀번호 변경'에서 바꾸세요)
+//  비밀번호 없음: 웹페이지 주소를 아는 사람은 누구나 보고 편집할 수 있습니다.
 // ─────────────────────────────────────────────────────────
 const DEFAULT_PASS = '1234';
 const CORS = {
@@ -58,17 +58,9 @@ export default {
       }
 
       if (!p.startsWith('/api/')) return new Response('Not found', { status: 404, headers: CORS });
-      if (!(await authed(req, db))) return json({ error: 'bad_password' }, 401);
 
       if (p === '/api/check') return json({ ok: true });
 
-      if (p === '/api/password' && m === 'POST') {
-        const b = await req.json().catch(() => ({}));
-        const np = typeof b.password === 'string' ? b.password.slice(0, 100) : '';
-        if (np.length < 4) return json({ error: 'too_short' }, 400);
-        await db.prepare('INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)').bind('passHash', await sha(np)).run();
-        return json({ ok: true });
-      }
 
       if (p === '/api/doc') {
         const path = url.searchParams.get('path') || '';
