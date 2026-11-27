@@ -193,7 +193,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 #busy{background:#1c1b19}
 @media(max-width:600px){.bar h1{font-size:16px}.row2{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
-.grid .lact{position:sticky;right:0;z-index:2;background:light-dark(#fff,#1f1d1b);white-space:nowrap;text-align:center;box-shadow:-2px 0 4px rgba(0,0,0,.08)}.grid thead th.lact{top:0;z-index:4;background:light-dark(#efece7,#2a2724)}.grid td.lact .gsig{display:inline-flex;width:auto;margin:0 2px;padding:0 10px;border-radius:4px}.gdel{color:#e66!important}.gdel:hover{background:#c00!important;color:#fff!important}
+.grid .lact{position:sticky;right:0;z-index:2;background:light-dark(#fff,#1f1d1b);white-space:nowrap;text-align:center;box-shadow:-2px 0 4px rgba(0,0,0,.08)}.grid thead th.lact{top:0;z-index:4;background:light-dark(#efece7,#2a2724)}.grid td.lact .gsig{display:inline-flex;width:auto;margin:0 2px;padding:0 10px;border-radius:4px}.grid tr.pbr td{background:light-dark(#fbeaea,#3a2020);padding:6px 8px;text-align:left;font-size:13px}.grid tr.pbr input{width:auto;display:inline-block;min-width:120px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:light-dark(#fff,#1f1d1b);color:inherit}.gdel{color:#e66!important}.gdel:hover{background:#c00!important;color:#fff!important}
 </style>
 </head>
 <body>
@@ -219,7 +219,7 @@ main.wide{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
 
 <div class="modal" id="menuM"><div class="mbox">
   <h3>파일</h3>
-  <p class="hint" style="margin:0">버전 2026-11-23 01:41</p>
+  <p class="hint" style="margin:0">버전 2026-11-27 20:43</p>
   <p class="hint">작성 내용은 이 기기 브라우저에 자동 저장됩니다. 다른 기기로 옮기거나 백업하려면 작업파일(.json)로 저장하세요.</p>
   <button class="btn" id="mSave">작업파일 저장 (.json)</button>
   <div class="drop" style="min-height:48px;padding:8px;font-weight:500"><span>작업파일 불러오기 (.json)</span><input type="file" id="mLoad" accept=".json,application/json" aria-label="작업파일 불러오기"></div>
@@ -386,12 +386,15 @@ function fillLedSel(){
 function fillFromLedger(no){
   const r=ledRow(no);if(!r)return;const d=D();d.led=no;
   const [a,date,loc,e,f,g]=r;const part=(e+' '+f).trim();
-  const oldPart=d.req.part;
+  const oldPart=d.req.part,oldReq={...d.req};
   Object.assign(d.req,{no:a,loc:loc||d.req.loc,part,items:g,date:date||d.req.date,reqDate:date||d.req.reqDate});
-  Object.assign(d.chk,{work:loc||d.chk.work,sub:f,part:e});
+  syncChk(d,oldReq);
   d.dwg.sub1=g;d.ros.loc=e;
-  d.pho.forEach(p=>{if(!p.t1||p.t1===oldPart||p.t1===e)p.t1=part});
+  d.pho.forEach(p=>{if(!p.loc||p.loc==='현장 내'||p.loc===oldPart)p.loc=part});
 }
+/* 체크리스트 공종·세부공종·부위·위치 ← 갑지 (직접 고친 칸은 그대로) */
+const chkFromReq=q=>{const pt=String(q.part||'').trim(),i=pt.indexOf('(');return{work:q.loc||'',sub:q.items||'',part:i>0?pt.slice(0,i).trim():pt,pos:i>0?pt.slice(i).trim():''}};
+function syncChk(d,oldReq,force){const a=oldReq?chkFromReq(oldReq):null,b=chkFromReq(d.req);for(const k in b){const cur=String(d.chk[k]||'');if(force||!cur||(a&&cur===a[k]))d.chk[k]=b[k]}}
 const keyOf=no=>(encodeURIComponent(String(no||'draft')).replace(/%/g,'~').replace(/[^A-Za-z0-9_\-.~:@+]/g,'_').slice(0,180))||'draft';
 const curKeyOf=()=>keyOf(D().led||D().req.no);
 async function switchDoc(no,fresh){
@@ -440,16 +443,16 @@ const CKSPEC={
 function pgChk(){
   const c0=D().chk,def=CK[c0.type]||CK.deck,all=!!def.wide,s4=!!def.sign4,T=all?8:7;
   const sp=all?CKSPEC.wide:CKSPEC.std;const nn=o=>({name:o.name,sig:o.sig||''});
-  const c={...c0,cDate:D().req.date,sDate:'',attach:'',c1:nn(c0.c1),c2:nn(c0.c2),s1:nn(c0.s1),s2:nn(c0.s2)};
+  const c={...c0,cDate:D().req.date,sDate:'',c1:nn(c0.c1),c2:nn(c0.c2),s1:nn(c0.s1),s2:nn(c0.s2)};
   const cols=def.cols||['시공사','감리단'];
   const W=794-168,natW=sp.w.reduce((a,x)=>a+x*7+5,0),kx=W/natW,AV=1123-66-52;
   const cg='<colgroup>'+sp.w.map(x=>`<col style="width:${((x*7+5)/natW*100).toFixed(2)}%">`).join('')+'</colgroup>';
   const fsx=sp.fs*1.333*kx,px=pt=>pt*1.333;
-  const footRows=s4?sp.foot.slice(0,4):(all?[sp.foot[0],sp.foot[3]]:sp.foot.slice(0,2));
+  const footRows=s4?sp.foot.slice(0,4):(all?[sp.foot[0],sp.foot[3]]:sp.foot.slice(0,2));const attPt=all?sp.foot[4]:sp.foot[2];   /* 첨부자료 행 (원본 엑셀) */
   let idx=0;
   const pages=def.pages.map((groups,pi)=>{
     const n=Math.max(1,groups.reduce((s,g)=>s+g.it.length,0));const last=pi===def.pages.length-1,showTitle=!(sp.noRepeat&&pi>0);
-    const fixedPt=(showTitle?sp.title+sp.meta*2:0)+sp.ch[0]+sp.ch[1]+(last?footRows.reduce((a,x)=>a+x,0):0);
+    const fixedPt=(showTitle?sp.title+sp.meta*2:0)+sp.ch[0]+sp.ch[1]+(last?footRows.reduce((a,x)=>a+x,0)+attPt:0);
     let itemPt=Array.isArray(sp.item)?sp.item[Math.min(pi,sp.item.length-1)]:sp.item;
     if(!all)itemPt=22;/* 항목이 적어도 행을 늘리지 않고, 남는 자리는 빈 칸으로 채움 */
     const ky=Math.min(1,AV/px(fixedPt+itemPt*n));const h=pt=>(px(pt)*ky).toFixed(1)+'px';
@@ -466,11 +469,12 @@ function pgChk(){
     }));
     let foot='';
     if(last){const L=all?3:2,Dc=all?1:1;const fr=footRows.map(h);
+      const att=`<tr style="height:${h(attPt)}"><th colspan="${L}">첨부자료</th><td colspan="${T-L}" style="text-align:left;padding-left:8px">${esc(c.attach||'')}</td></tr>`;
       foot=s4?`<tr style="height:${fr[0]}"><th colspan="${L}" rowspan="2">시공자 점검일</th><td colspan="${T-L-4}" rowspan="2" class="c">${fmtYMD(c.cDate)}</td><th class="nw">총괄 시공 책임자</th><td colspan="3" class="c">${sigH(c.c1,1)}</td></tr><tr style="height:${fr[1]}"><th class="nw">공종별시공관리자</th><td colspan="3" class="c">${sigH(c.c2,1)}</td></tr>
         <tr style="height:${fr[2]}"><th colspan="${L}" rowspan="2">감리자 점검일</th><td colspan="${T-L-4}" rowspan="2" class="c">${fmtYMD(c.sDate)}</td><th class="nw">총괄감리책임자</th><td colspan="3" class="c">${sigH(c.s1,1)}</td></tr><tr style="height:${fr[3]}"><th class="nw">건축사보<br>(공종별감리책임자)</th><td colspan="3" class="c">${sigH(c.s2,1)}</td></tr>`
       :`<tr style="height:${fr[0]}"><th colspan="${L}">시공자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.cDate)}</td><th class="nw">공종별 시공 관리자</th><td colspan="3" class="c">${sigH(c.c2,1)}</td></tr>
         <tr style="height:${fr[1]}"><th colspan="${L}">감리자점검일</th><td colspan="${T-L-4}" class="c">${fmtYMD(c.sDate)}</td><th class="nw">건축사보<br>(공종별 감리책임자)</th><td colspan="3" class="c">${sigH(c.s2,1)}</td></tr>`;
-    }
+    foot+=att;}
     const padTr=`<tr class="pad" style="height:${h(itemPt)}"><td></td><td></td><td colspan="${all?2:1}"></td><td></td><td></td><td></td><td></td></tr>`;
     return `<div class="page"><div class="cl" data-rh="${(px(itemPt)*ky).toFixed(1)}" data-pad='${padTr}' style="font-size:${fs}px"><table>${cg}${head}${rows}${foot}</table></div></div>`;
   });
@@ -487,10 +491,15 @@ function pgDwg(){
    <div class="box">${it.img?bimg(it.img,it.size):'<span class="ph0">도면을 불러와 주세요</span>'}</div></div></div>`).join('');
 }
 const ROS_N=26;
+/* 실명부 쪽: 'pb'(새 쪽) 표시가 있는 행에서 나누고, 한 묶음이 26명을 넘으면 다음 쪽으로 이어짐 */
+function rosPages(){const r=D().ros,rows=r.rows||[];const segs=[];let cur=null;
+  rows.forEach((x,i)=>{if(!cur||(x.pb&&i>0)){cur={date:i&&x.pb?(x.pd||''):r.date,loc:i&&x.pb?(x.pl||''):r.loc,rows:[]};segs.push(cur)}cur.rows.push(x)});
+  if(!segs.length)segs.push({date:r.date,loc:r.loc,rows:[]});
+  const out=[];for(const sg of segs){const n=Math.max(1,Math.ceil(sg.rows.length/ROS_N));for(let k=0;k<n;k++)out.push({date:sg.date,loc:sg.loc,rows:sg.rows.slice(k*ROS_N,k*ROS_N+ROS_N)})}return out}
 function pgRos(){
-  const r=D().ros,rows=r.rows.length?r.rows:[];const pages=Math.max(1,Math.ceil(rows.length/ROS_N));let h='';
-  for(let p=0;p<pages;p++){
-    const chunk=rows.slice(p*ROS_N,p*ROS_N+ROS_N);let tr='';
+  let h='';
+  for(const pgx of rosPages()){
+    const chunk=pgx.rows,r=pgx;let tr='';
     for(let i=0;i<ROS_N;i++){const x=chunk[i];
       tr+=`<tr>${i===0?`<td rowspan="${ROS_N}" style="font-size:11.5px">${br(fmtD(r.date).replace(' ','\n'))}</td><td rowspan="${ROS_N}" style="font-size:11px">${br(r.loc)}</td>`:''}<td>${esc(x?.org)}</td><td>${esc(x?.pos)}</td><td>${esc(x?.name)}</td><td>${esc(x?.birth)}</td><td>${esc(x?.work)}</td><td style="position:relative">${x?.sig?`<img src="${x.sig}" alt="" style="height:26px;max-width:84px;display:block;margin:0 auto">`:''}</td></tr>`}
     h+=`<div class="page"><div class="rs"><h1>공사 참여자(기능공 포함) 실명부</h1><div class="pj">■ ${esc(S.project.replace(/1BL$/,'1블록'))}</div>
@@ -509,7 +518,7 @@ function pgPho(){
   return h;
 }
 const PG={req:pgReq,chk:pgChk,dwg:pgDwg,ros:pgRos,pho:pgPho};
-const pageCount=k=>({req:1,chk:(CK[D().chk.type]||CK.deck).pages.length,dwg:Math.max(1,D().dwg.list.length),ros:Math.max(1,Math.ceil(D().ros.rows.length/ROS_N)),pho:Math.max(1,Math.ceil(D().pho.length/2))})[k];
+const pageCount=k=>({req:1,chk:(CK[D().chk.type]||CK.deck).pages.length,dwg:Math.max(1,D().dwg.list.length),ros:rosPages().length,pho:Math.max(1,Math.ceil(D().pho.length/2))})[k];
 
 /* ---------- 미리보기 ---------- */
 let pvT;
@@ -556,7 +565,7 @@ function formReq(){
 }
 const isCustom=k=>!!S.ckCustom?.[k];
 function formChk(){
-  const c=D().chk,def=CK[c.type]||CK.deck,s4=!!def.sign4;
+  syncChk(D(),null);const c=D().chk,def=CK[c.type]||CK.deck,s4=!!def.sign4;
   const nm=(k,label,list)=>`<label class="f"><span>${label}</span><input data-k="${k}.name" value="${esc(getP(D(),k).name)}" list="${list}"></label>`;
   const opts=Object.entries(CK).map(([k,v])=>`<option value="${k}"${k===c.type?' selected':''}>${isCustom(k)?'등록 · ':''}${esc(v.name)} (${v.pages.flat().reduce((n,g)=>n+g.it.length,0)}항목)</option>`).join('');
   return `<h2>체크리스트 ${incBox('chk')}</h2>${DL}
@@ -564,7 +573,12 @@ function formChk(){
   <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn s" data-ck="edit">${isCustom(c.type)?'이 체크리스트 수정':'복사해서 수정'}</button><button class="btn s" data-ck="new">새로 만들기</button>${isCustom(c.type)?'<button class="btn s" data-ck="del">이 체크리스트 삭제</button>':''}</div>
   ${drop('ck','+ 체크리스트 등록 (엑셀 / PDF)','.xlsx,.xlsm,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'파일을 읽어 표로 보여드리고, 확인·수정한 뒤 등록합니다')}
   <button class="btn" data-tpl="checklist">⬇ 체크리스트 엑셀 등록양식 받기 (원래 엑셀 양식 · 예시 시트 포함)</button>
-  <p class="hint">엑셀 양식 그대로 출력됩니다. 문서번호·공종·부위·점검일은 검측대장에서 자동으로 들어갑니다.</p>
+  <p class="hint">엑셀 양식 그대로 출력됩니다. 문서번호·점검일은 검측대장에서 자동으로 들어갑니다.</p>
+  <h3>공종 · 부위 <small style="font-weight:400;color:var(--mute)">검측요청서 갑지 내용으로 먼저 채워지고, 고칠 수 있습니다</small></h3>
+  <div class="row2">${inp('chk.work','공종')}${inp('chk.sub','세부공종')}</div>
+  <div class="row2">${inp('chk.part','부위')}${inp('chk.pos','위치')}</div>
+  ${inp('chk.attach','첨부자료')}
+  <button class="btn s" data-ck="fromreq">↺ 갑지 내용으로 다시 채우기</button>
   <h3>이름 · 서명</h3>
   <button class="btn" data-smgr>✍ 개인 서명 등록·관리</button>
   ${s4?sgn('chk.c1','총괄 시공 책임자','dlB'):''}${sgn('chk.c2','공종별 시공 관리자 (시공사)','dlB')}
@@ -589,16 +603,16 @@ function formRos(){
   <div class="row2">${inp('ros.date','작업일','date')}${inp('ros.loc','작업위치')}</div>
   ${drop('ros','엑셀에서 명단 불러오기 (.xlsx / .xlsm)','.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12',false,'실명부 시트의 소속·직위·성명·생년월일·공사한내용을 자동으로 읽습니다')}
   <button class="btn" data-tpl="roster">⬇ 실명부 엑셀 양식 받기 (빈 양식에 명단을 적어 불러오세요)</button>
-  <p class="hint">엑셀처럼 칸을 눌러 바로 입력하세요. Enter·↑↓로 칸 이동, 엑셀에서 복사한 여러 칸을 붙여넣기 할 수 있습니다. ${r.rows.length}명 · ${ROS_N}명마다 한 쪽이 늘어납니다.</p>
-  <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button><button class="btn s" data-smgr>✍ 개인 서명 등록</button><button class="btn s" data-rs="sigall">등록 서명 일괄 넣기</button></div>
+  <p class="hint">엑셀처럼 칸을 눌러 바로 입력하세요. Enter·↑↓로 칸 이동, 엑셀에서 복사한 여러 칸을 붙여넣기 할 수 있습니다. ${r.rows.length}명 · ${rosPages().length}쪽 · ${ROS_N}명마다 한 쪽이 늘어나고, ‘✂ 새 쪽’으로 작업일·작업위치가 다른 쪽을 나눌 수 있습니다. 위 작업일·작업위치는 첫 쪽에 들어갑니다.</p>
+  <div class="gtool"><button class="btn s" data-rs="add">+ 행 추가</button><button class="btn s" data-rs="ins">행 삽입 (선택 행 위)</button><button class="btn s" data-rs="del">선택 행 삭제</button><button class="btn s" data-rs="up">▲ 위로</button><button class="btn s" data-rs="down">▼ 아래로</button><button class="btn s" data-rs="fill">↓ 아래 빈칸 채우기</button><button class="btn s" data-rs="pb" title="선택한 행부터 새 쪽으로 나누고 그 쪽의 작업일·작업위치를 따로 적습니다">✂ 선택 행부터 새 쪽</button><button class="btn s" data-rs="trim">빈 행 정리</button><button class="btn s" data-rs="reset">기본 명단</button><button class="btn s" data-rs="clr">서명 모두 지우기</button><button class="btn s" data-smgr>✍ 개인 서명 등록</button><button class="btn s" data-rs="sigall">등록 서명 일괄 넣기</button></div>
   <div class="gwrap"><table class="grid"><colgroup><col style="width:40px">${RCOL.map(c=>`<col style="width:${c[2]}px">`).join('')}<col style="width:84px"></colgroup>
   <thead><tr><th></th>${RCOL.map(c=>`<th>${c[1]}</th>`).join('')}<th>서명</th></tr></thead>
-  <tbody>${r.rows.map((x,i)=>`<tr class="${i===rSel?'sel':''}"><th data-rsel="${i}">${i+1}</th>${RCOL.map(([f])=>`<td><input data-rk="${i}.${f}" value="${esc(x[f])}" aria-label="${i+1}행 ${f}"${f==='birth'?' inputmode="numeric"':''}></td>`).join('')}<td><button class="gsig" data-rsig="${i}">${x.sig?`<img src="${x.sig}" alt="서명">`:(S.sigLib?.[x.name]?'등록서명':'서명')}</button></td></tr>`).join('')}</tbody></table></div>`;
+  <tbody>${r.rows.map((x,i)=>`${x.pb&&i>0?`<tr class="pbr"><td colspan="7"><b>✂ 새 쪽</b> 작업일 <input type="date" data-rpb="${i}.pd" value="${esc(x.pd||'')}"> 작업위치 <input data-rpb="${i}.pl" value="${esc(x.pl||'')}" placeholder="작업위치"> <button class="btn s" data-rpbx="${i}">나누기 해제</button></td></tr>`:''}<tr class="${i===rSel?'sel':''}"><th data-rsel="${i}">${i+1}</th>${RCOL.map(([f])=>`<td><input data-rk="${i}.${f}" value="${esc(x[f])}" aria-label="${i+1}행 ${f}"${f==='birth'?' inputmode="numeric"':''}></td>`).join('')}<td><button class="gsig" data-rsig="${i}">${x.sig?`<img src="${x.sig}" alt="서명">`:(S.sigLib?.[x.name]?'등록서명':'서명')}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function formPho(){
-  const ph=D().pho;ph.forEach(p=>{if(!p.t1&&D().req.part)p.t1=D().req.part});
+  const ph=D().pho,pt=D().req.part;if(pt)ph.forEach(p=>{if(p.t1===pt&&!p.t1x)p.t1='';if(!p.loc||p.loc==='현장 내')p.loc=pt;p.t1x=1});
   return `<h2>사진대지 ${incBox('pho')}</h2>
-  <p class="hint">한 쪽에 2장씩 들어갑니다. 휴대폰에서는 ‘사진 추가’를 누르면 카메라 촬영 또는 갤러리 선택이 나옵니다(여러 장 선택 가능). 촬영일은 사진 정보에서 자동으로 채우고, 사진에 정보판(공사명·일자·위치·내용)이 찍혀 있으면 그 글자를 읽어 일자는 일시, 위치는 위치 칸, 내용은 내용 2행에 넣습니다. 내용 1행에는 검측요청서의 검측부위가 자동으로 들어갑니다.</p>
+  <p class="hint">한 쪽에 2장씩 들어갑니다. 휴대폰에서는 ‘사진 추가’를 누르면 카메라 촬영 또는 갤러리 선택이 나옵니다(여러 장 선택 가능). 촬영일은 사진 정보에서 자동으로 채우고, 사진에 정보판(공사명·일자·위치·내용)이 찍혀 있으면 그 글자를 읽어 일자는 일시, 위치는 내용 1행, 내용은 내용 2행에 넣습니다. 위치 칸에는 검측요청서의 검측부위가 자동으로 들어갑니다.</p>
   ${drop('pho','+ 사진 추가','image/*',true,'휴대폰: 갤러리에서 여러 장 선택 또는 카메라 촬영')}
   <button class="btn" data-paste="pho">📋 복사한 사진 붙여넣기 (Ctrl+V)</button>
   <label class="chk" style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox" id="ocrOn" ${ocrOn()?'checked':''} style="width:20px;height:20px"> <span>사진 속 정보판(일자·위치·내용) 글자를 읽어 자동 입력</span></label>
@@ -655,13 +669,15 @@ $('#newNo').addEventListener('click',newRequest);
 const form=$('#form');
 form.addEventListener('input',e=>{
   const t=e.target,d=D();
-  if(t.dataset.k){const v=t.type==='checkbox'?t.checked:t.value;const oldPart=d.req.part;setP(d,t.dataset.k,v);
-    if(t.dataset.k==='req.part')d.pho.forEach(p=>{if(!p.t1||p.t1===oldPart)p.t1=v});   /* 사진대지 내용 1행 = 검측부위 */
+  if(t.dataset.k){const v=t.type==='checkbox'?t.checked:t.value;const oldPart=d.req.part,oldReq={...d.req};setP(d,t.dataset.k,v);
+    if(/^req\.(loc|part|items)$/.test(t.dataset.k))syncChk(d,oldReq);
+    if(t.dataset.k==='req.part')d.pho.forEach(p=>{if(!p.loc||p.loc==='현장 내'||p.loc===oldPart)p.loc=v});   /* 사진대지 위치 = 검측부위 */
     if(/\.name$/.test(t.dataset.k)){const base=t.dataset.k.slice(0,-5);autoSig(getP(d,base),form.querySelector(`[data-sig="${base}"]`),'✍ 서명하기')}
     if(t.dataset.k==='req.no'||t.dataset.k==='req.part'||t.dataset.k==='req.items'||t.dataset.k==='req.loc'){const r=ledRow(d.led);if(r&&d.led===d.req.no){if(t.dataset.k==='req.items')r[5]=v;if(t.dataset.k==='req.loc')r[2]=v}}
     if(t.dataset.k==='chk.type'){d.chk.marks={};d.chk.acts={};seedMarks();render();save();return}}
   else if(t.dataset.proj!==undefined)S.project=t.value;
   else if(t.dataset.act)d.chk.acts[t.dataset.act]=t.value;
+  else if(t.dataset.rpb){const[i,f]=t.dataset.rpb.split('.');d.ros.rows[i][f]=t.value}
   else if(t.dataset.rk){const[i,f]=t.dataset.rk.split('.');d.ros.rows[i][f]=t.value;if(f==='name')autoSig(d.ros.rows[i],form.querySelector(`[data-rsig="${i}"]`),'서명')}
   else if(t.dataset.sz){const[k,i]=t.dataset.sz.split('.');const it=k==='dw'?d.dwg.list[i]:d.pho[i];it.size=+t.value;const l=form.querySelector(`[data-szl="${k}.${i}"]`);if(l)l.textContent=t.value+'%'}
   else if(t.dataset.ledcat!==undefined){const cs=$('#catSel');cs.value=t.value;cs.dispatchEvent(new Event('change'));if(t.value!=='__add'){lSel=-1;render()}return}
@@ -707,10 +723,13 @@ form.addEventListener('click',async e=>{
     if(b.dataset.dw==='up'){[L[i-1],L[i]]=[L[i],L[i-1]]}
     if(b.dataset.dw==='del'){if(!await ask('도면을 삭제할까요?'))return;L.splice(i,1)}
     if(b.dataset.dw!=='edit'){save();render()}return}
+  if(b.dataset.ck==='fromreq'){syncChk(d,null,true);save();render();toast('갑지의 위치 및 공종·검측사항·검측부위로 채웠습니다');return}
+  if(b.dataset.rpbx){const x=d.ros.rows[+b.dataset.rpbx];if(x){delete x.pb;delete x.pd;delete x.pl}save();render();return}
   if(b.dataset.rs){const R=d.ros.rows,act=b.dataset.rs,j=Math.min(rSel,R.length-1);const blank=()=>({id:uid(),org:'',pos:'',name:'',birth:'',work:'',sig:''});
     if(act==='add'){R.push(blank());rSel=R.length-1;rFocus=[rSel,'org']}
     if(act==='ins'){R.splice(Math.max(0,j),0,blank());rSel=Math.max(0,j);rFocus=[rSel,'org']}
-    if(act==='del'){if(j<0||!R.length)return;R.splice(j,1);rSel=Math.min(j,R.length-1)}
+    if(act==='del'){if(j<0||!R.length)return;const g=R[j];if(g.pb&&R[j+1]&&!R[j+1].pb)Object.assign(R[j+1],{pb:1,pd:g.pd,pl:g.pl});R.splice(j,1);rSel=Math.min(j,R.length-1)}
+    if(act==='pb'){if(j<1)return toast('두 번째 행부터 나눌 수 있습니다. 나눌 첫 행을 먼저 누르세요');if(R[j].pb)return toast('이미 새 쪽이 시작되는 행입니다');Object.assign(R[j],{pb:1,pd:R[j].pd||d.ros.date,pl:R[j].pl||d.ros.loc})}
     if(act==='up'){if(j<1)return;[R[j-1],R[j]]=[R[j],R[j-1]];rSel=j-1}
     if(act==='down'){if(j<0||j>=R.length-1)return;[R[j+1],R[j]]=[R[j],R[j+1]];rSel=j+1}
     if(act==='fill'){const[fi,ff]=rLast;if(fi==null)return toast('채울 값이 있는 칸을 먼저 누르세요');const v=R[fi]?.[ff];if(!v)return toast('선택한 칸이 비어 있습니다');let n=0;for(let k=fi+1;k<R.length;k++)if(!R[k][ff]){R[k][ff]=v;n++}toast(`${n}칸을 채웠습니다`)}
@@ -844,36 +863,44 @@ async function readWorkbook(file){
   return sheets;
 }
 const norm=s=>String(s||'').replace(/\s/g,'');
+const xlISO=v=>{v=String(v||'').trim();if(/^\d{5}(\.\d+)?$/.test(v)){const d=new Date(Date.UTC(1899,11,30)+Math.floor(+v)*864e5);return d.toISOString().slice(0,10)}
+  const m=v.match(/(20\d{2})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''};
+/* 실명부 시트 → 묶음 [{date,loc,ppl}] : 가로로 여러 쪽(성명 머리글 여러 개)이 있으면 각각 한 묶음 */
 function rosterFromGrid(g){
-  const people=[];
+  const blocks=[];
   for(const r of Object.keys(g).map(Number).sort((a,b)=>a-b)){
     if(r!==r||!g[r])continue;for(const[c,v]of Object.entries(g[r])){if(norm(v)!=='성명')continue;const cc=+c;
-      const find=(test)=>{for(let d=-5;d<=5;d++){const h=norm(g[r][cc+d]);if(h&&test(h))return cc+d}return null};
-      const col={org:find(h=>h==='소속'||h.startsWith('소속')||h==='업체명'),pos:find(h=>h.startsWith('직위')||h.startsWith('직종')||h.startsWith('공종')&&h.length<4),name:cc,birth:find(h=>h.startsWith('생년월일')||h.startsWith('주민')),work:find(h=>h.includes('공사한')||h.includes('작업내용')||h.includes('공사내용'))};
-      let org='',blank=0;
+      const find=(test,lo=-5,hi=5)=>{for(const d of [...Array(hi-lo+1)].map((_,k)=>lo+k).sort((a,b)=>Math.abs(a)-Math.abs(b))){const h=norm(g[r][cc+d]);if(h&&test(h))return cc+d}return null};
+      const col={org:find(h=>h==='소속'||h.startsWith('소속')||h==='업체명'),pos:find(h=>h.startsWith('직위')||h.startsWith('직종')||h.startsWith('공종')&&h.length<4),name:cc,birth:find(h=>h.startsWith('생년월일')||h.startsWith('주민')),work:find(h=>h.includes('공사한')||h.includes('작업내용')||h.includes('공사내용')),
+        date:find(h=>h==='작업일'||h.startsWith('작업일자')||h==='일자',-7,-1),loc:find(h=>h.startsWith('작업위치')||h==='위치',-7,-1)};
+      let org='',blank=0,date='',loc='';const ppl=[];
       for(let rr=r+1;rr<r+400&&blank<15;rr++){const row=g[rr]||{};const first=Object.values(row).join('');if(first.startsWith('※'))break;
+        if(col.date!=null&&!date&&row[col.date])date=xlISO(row[col.date]);if(col.loc!=null&&!loc&&row[col.loc])loc=String(row[col.loc]).replace(/\s*\n\s*/g,' ').trim();
         const nm=(row[col.name]||'').replace(/\s+/g,' ').trim();if(col.org!=null&&row[col.org])org=row[col.org];
         if(!nm||norm(nm)==='성명'){blank++;continue}blank=0;
-        people.push({id:uid(),org:col.org!=null?(row[col.org]||org):'',pos:col.pos!=null?(row[col.pos]||'').replace(/\n/g,''):'',name:nm,birth:col.birth!=null?(row[col.birth]||''):'',work:col.work!=null?(row[col.work]||'').replace(/\n/g,' '):'',sig:''});}
+        ppl.push({id:uid(),org:col.org!=null?(row[col.org]||org):'',pos:col.pos!=null?(row[col.pos]||'').replace(/\n/g,''):'',name:nm,birth:col.birth!=null?(row[col.birth]||''):'',work:col.work!=null?(row[col.work]||'').replace(/\n/g,' '):'',sig:''});}
+      if(ppl.length)blocks.push({date,loc,ppl,col:cc,row:r});
     }
   }
-  return people;
+  blocks.sort((a,b)=>a.row-b.row||a.col-b.col);
+  return blocks;
 }
 async function importRoster(file){
   if(!file)return;busy('엑셀 읽는 중…');
   try{
     const sheets=await readWorkbook(file);const found=[];
     const ordered=[...sheets.filter(s=>s.name.includes('실명부')),...sheets.filter(s=>!s.name.includes('실명부'))];
-    for(const sh of ordered){const ppl=rosterFromGrid(await sh.load());if(ppl.length)found.push({name:sh.name,ppl})}
+    for(const sh of ordered){const blocks=rosterFromGrid(await sh.load());if(blocks.length)found.push({name:sh.name,blocks,ppl:blocks.flatMap(b=>b.ppl)})}
     busy();
     if(!found.length){toast('명단을 찾지 못했습니다. ‘성명’ 머리글이 있는 시트가 필요합니다',4500);return}
     const pick=await choose(found);if(!pick)return;
-    const R=D().ros;R.rows=pick.add?[...R.rows.filter(x=>RCOL.some(([f])=>x[f])),...pick.sheet.ppl]:pick.sheet.ppl;
-    save();render();toast(`‘${pick.sheet.name}’에서 ${pick.sheet.ppl.length}명을 불러왔습니다`);
+    const R=D().ros,bl=pick.sheet.blocks,keep=pick.add?R.rows.filter(x=>RCOL.some(([f])=>x[f])):[];const rows=[...keep];
+    bl.forEach((b,k)=>{const ppl=b.ppl.map(x=>({...x}));if(rows.length)Object.assign(ppl[0],{pb:1,pd:b.date||R.date,pl:b.loc||''});else{if(b.date)R.date=b.date;if(b.loc)R.loc=b.loc}rows.push(...ppl)});
+    R.rows=rows;save();render();toast(`‘${pick.sheet.name}’에서 ${pick.sheet.ppl.length}명을 불러왔습니다`+(bl.length>1?` (${bl.length}쪽으로 나눔)`:''),3500);
   }catch(e){busy();toast(String(e?.message||'엑셀을 읽지 못했습니다'),5000)}
 }
 function choose(found){return new Promise(res=>{const m=$('#cfM');$('#cfT').textContent='불러올 실명부 시트를 고르세요';
-  $('#cfP').innerHTML=`<span style="display:grid;gap:6px;margin-top:6px">${found.map((f,i)=>`<button class="btn" data-pick="${i}" style="text-align:left;white-space:normal">${esc(f.name)} — ${f.ppl.length}명<br><small style="color:var(--mute);font-weight:400">${esc(f.ppl.slice(0,4).map(p=>p.name).join(', '))}${f.ppl.length>4?' …':''}</small></button>`).join('')}</span><label class="chk" style="margin-top:8px"><input type="checkbox" id="pkAdd">지금 명단 뒤에 추가 (끄면 바꾸기)</label>`;
+  $('#cfP').innerHTML=`<span style="display:grid;gap:6px;margin-top:6px">${found.map((f,i)=>`<button class="btn" data-pick="${i}" style="text-align:left;white-space:normal">${esc(f.name)} — ${f.ppl.length}명${f.blocks.length>1?` · ${f.blocks.length}쪽`:''}<br><small style="color:var(--mute);font-weight:400">${esc(f.ppl.slice(0,4).map(p=>p.name).join(', '))}${f.ppl.length>4?' …':''}</small></button>`).join('')}</span><label class="chk" style="margin-top:8px"><input type="checkbox" id="pkAdd">지금 명단 뒤에 추가 (끄면 바꾸기)</label>`;
   $('#cfY').style.display='none';m.classList.add('on');
   const done=v=>{m.classList.remove('on');$('#cfY').style.display='';$('#cfP').onclick=null;$('#cfN').onclick=null;res(v)};
   $('#cfP').onclick=e=>{const b=e.target.closest('[data-pick]');if(b)done({sheet:found[+b.dataset.pick],add:$('#pkAdd').checked})};$('#cfN').onclick=()=>done(null)})}
@@ -1263,7 +1290,7 @@ async function exifDate(file){
       const s=rd(e);const m2=s.match(/^(\d{4}):(\d{2}):(\d{2})/);return m2?`${m2[1]}-${m2[2]}-${m2[3]}`:''}
       if((m&0xFF00)!==0xFF00)break;o+=2+len}}catch(e){}return'';
 }
-const newPhoto=()=>{const d=D(),last=d.pho.at(-1);return{id:uid(),img:'',date:last?.date||today(),loc:last?.loc||'현장 내',t1:d.req.part||last?.t1||'',t2:last?.t2||''}};
+const newPhoto=()=>{const d=D(),last=d.pho.at(-1);return{id:uid(),img:'',date:last?.date||today(),loc:d.req.part||last?.loc||'현장 내',t1:last?.t1||'',t2:last?.t2||''}};
 async function photoFrom(f){const p=newPhoto();p.img=await shrink(f);const ed=await exifDate(f);p.date=ed||(f.lastModified?new Date(f.lastModified-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10):p.date);return p}
 async function addPhotos(files){
   if(!files.length)return;busy(`사진 ${files.length}장 넣는 중…`);const jobs=[];
@@ -1353,7 +1380,7 @@ async function ocrPhotos(jobs,manual){
           if((r.site?1:0)+(r.date?1:0)+(r.loc?1:0)+(r.what?1:0)>=2){o=r;break}}
         if(!o.date){await w.setParameters({tessedit_pageseg_mode:'3'});const {data}=await w.recognize(c);const r=parseBoard(data.text);if(r.date)o.date=r.date}  /* 정보판을 못 찾으면 날짜만 */
       }catch(e){}
-      if(o.date)p.date=o.date;if(o.loc)p.loc=o.loc;if(o.what)p.t2=o.what;   /* 정보판 위치 → 위치 칸, 내용 → 내용 2행 (내용 1행은 검측부위) */
+      if(o.date)p.date=o.date;if(o.loc)p.t1=o.loc;if(o.what)p.t2=o.what;   /* 정보판 위치 → 내용 1행, 내용 → 내용 2행 (위치 칸은 검측부위) */
       if(o.date||o.loc||o.what)n++}
     busy();if(manual)toast(n?'정보판 글자를 읽어 일시·위치·내용을 채웠습니다. 틀린 글자는 고쳐 주세요':'사진에서 정보판 글자를 찾지 못했습니다',3500);return n}
   catch(e){busy();toast('글자 인식 도구를 불러오지 못했습니다 (인터넷 연결 확인)',3500);return -1}
